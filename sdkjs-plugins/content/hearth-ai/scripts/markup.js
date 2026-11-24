@@ -16,6 +16,13 @@
 		return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 	}
 
+	// unticked normalises line ends and drops the backticks models put round
+	// cell names and function names (`A1`, `FALSE`) even when asked not to:
+	// in a document or a comment they would show as stray marks.
+	function unticked(markdown) {
+		return markdown.replace(/\r/g, '').replace(/`/g, '');
+	}
+
 	// spans splits one line into runs of plain, bold (**x**) and italic (*x*)
 	// text: [{ text, bold, italic }].
 	function spans(line) {
@@ -39,7 +46,7 @@
 	function toBlocks(markdown) {
 		const blocks = [];
 		let open = null; // the text paragraph still taking lines
-		markdown.replace(/\r/g, '').split('\n').forEach(function (raw) {
+		unticked(markdown).split('\n').forEach(function (raw) {
 			const line = raw.trim();
 			const heading = line.match(/^(#{1,4})\s+(.*)$/);
 			const bullet = line.match(/^[-*•]\s+(.*)$/);
@@ -76,7 +83,7 @@
 
 	// toPlain drops the marks and keeps the words, one line per item.
 	function toPlain(markdown) {
-		return markdown.replace(/\r/g, '').split('\n').map(function (raw) {
+		return unticked(markdown).split('\n').map(function (raw) {
 			return raw.trim().replace(/^#{1,4}\s+/, '').replace(/\*\*([^*\n]+)\*\*/g, '$1').replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1$2');
 		}).join('\n').replace(/\n{3,}/g, '\n\n').trim();
 	}

@@ -114,7 +114,10 @@
 		const items = HearthAI.tasks.forEditor(editor).map(function (task, n) {
 			return {
 				id: 'hearth_ai_' + task.id, type: 'big-button', text: task.label, hint: task.hint,
-				icons: 'resources/icons/' + task.id + '.svg',
+				// One drawing per theme type: dark strokes for light themes
+				// and light strokes for dark ones. The editor fills in the
+				// bracketed part from the theme in use.
+				icons: 'resources/icons/%theme-type%(light|dark)/' + task.id + '.svg',
 				lockInViewMode: true, enableToggle: false, separator: task.id === 'ask' && n > 0,
 			};
 		});
