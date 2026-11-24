@@ -109,6 +109,10 @@
 	}
 
 	window.Asc.plugin.init = function () {
+		// The host turns the assistant off (Hearth: while its admins have it
+		// off); the image's add-ins start by themselves, so the add-in itself
+		// shows no tab then.
+		if ((window.Asc.plugin.info.options || {}).off) return;
 		editor = window.Asc.plugin.info.editorType;
 		HearthAI.model.configure(window.Asc.plugin.info.aiPluginSettings);
 		const items = HearthAI.tasks.forEditor(editor).map(function (task, n) {

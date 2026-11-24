@@ -1,0 +1,19 @@
+{
+	"name": "References",
+	"guid": "asc.{8D3C5B2A-1F4E-4A6B-9C7D-2E5F8A1B3C4D}",
+	"version": "0.1.0",
+	"minVersion": "9.0.0",
+	"variations": [
+		{
+			"description": "Cites from Hearth's reference library and PubMed, keeps the bibliography in the document's citation style, and stores citations as Zotero's Word fields.",
+			"url": "index.html",
+			"icons": ["resources/icons/light/cite.svg"],
+			"isViewer": false,
+			"EditorsSupport": ["word"],
+			"type": "background",
+			"initDataType": "none",
+			"buttons": [],
+			"events": ["onToolbarMenuClick"]
+		}
+	]
+}

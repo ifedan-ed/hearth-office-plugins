@@ -1,0 +1,23 @@
+<!--
+ SPDX-FileCopyrightText: 2026 Hearth contributors
+ SPDX-License-Identifier: AGPL-3.0-only
+-->
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<title>References</title>
+		<!-- The background page: no window of its own. The plugin SDK comes
+		     from the Document Server itself; nothing is loaded from an
+		     outside site. Each script adds to window.HearthRefs; main.js
+		     wires them together last. -->
+		<script src="../v1/plugins.js"></script>
+		<script src="../v1/plugins-ui.js"></script>
+		<script src="scripts/fields.js"></script>
+		<script src="scripts/bridge.js"></script>
+		<script src="scripts/document.js"></script>
+		<script src="scripts/citations.js"></script>
+		<script src="scripts/main.js"></script>
+	</head>
+	<body></body>
+</html>

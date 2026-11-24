@@ -1,0 +1,65 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Hearth contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ *
+ * The panel takes its colours from the editor's theme (the plugin SDK
+ * sets the theme's named colours as custom properties), so it follows
+ * light, dark and Hearth's own theme; the values after the commas are the
+ * editor's stock light theme, used until the theme arrives.
+ */
+:root {
+	--panel-bg: var(--background-normal, #ffffff);
+	--panel-text: var(--text-normal, #333333);
+	--panel-muted: var(--text-secondary, #6b6b6b);
+	--panel-border: var(--border-regular-control, #c0c0c0);
+	--panel-hover: var(--highlight-button-hover, #e0e0e0);
+	--panel-accent: var(--background-primary-dialog-button, #444444);
+	--panel-accent-text: var(--text-inverse, #ffffff);
+	--panel-danger: #c0392b;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--panel-bg); color: var(--panel-text); font: 12px/1.45 Arial, Helvetica, sans-serif; display: flex; flex-direction: column; }
+[hidden] { display: none !important; }
+.tabs { display: flex; gap: 2px; padding: 8px 10px 0; border-bottom: 1px solid var(--panel-border); }
+.tabs button { border: 0; border-bottom: 2px solid transparent; background: none; padding: 6px 10px; color: var(--panel-muted); cursor: pointer; font: inherit; }
+.tabs button[aria-selected='true'] { color: var(--panel-text); border-bottom-color: var(--panel-accent); font-weight: 700; }
+.view { flex: 1; min-height: 0; overflow: auto; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+.note, #problem, .status { margin: 8px 10px 0; padding: 6px 8px; border-radius: 3px; }
+.note { background: var(--panel-hover); }
+#problem { color: var(--panel-danger); border: 1px solid var(--panel-danger); }
+.status { color: var(--panel-muted); }
+input[type=search], input:not([type]), .more input {
+	width: 100%; padding: 5px 8px; font: inherit; color: inherit; background: var(--panel-bg);
+	border: 1px solid var(--panel-border); border-radius: 3px;
+}
+input:focus-visible, button:focus-visible { outline: 2px solid var(--panel-accent); outline-offset: 1px; }
+button { padding: 4px 12px; font: inherit; color: inherit; cursor: pointer; background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 3px; }
+button:hover { background: var(--panel-hover); }
+button.primary { background: var(--panel-accent); border-color: var(--panel-accent); color: var(--panel-accent-text); }
+button.danger { color: var(--panel-danger); border-color: var(--panel-danger); }
+button:disabled { opacity: .5; cursor: default; }
+button.icon { border: 0; padding: 0 6px; font-size: 16px; line-height: 1; }
+.row { display: flex; gap: 6px; flex-wrap: wrap; }
+h2 { margin: 0 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--panel-muted); }
+.muted { color: var(--panel-muted); }
+.error { color: var(--panel-danger); }
+.list, .doc-list, .styles, #cluster-items { list-style: none; margin: 0; padding: 0; }
+.result { display: flex; gap: 8px; align-items: flex-start; padding: 6px 0; border-bottom: 1px solid var(--panel-border); }
+.result .text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.title { font-weight: 700; overflow-wrap: anywhere; }
+.sub { color: var(--panel-muted); overflow-wrap: anywhere; }
+.source { align-self: flex-start; margin-top: 2px; padding: 0 6px; border-radius: 8px; background: var(--panel-hover); font-size: 10px; }
+.results .group + .group { margin-top: 10px; }
+.cluster { border: 1px solid var(--panel-border); border-radius: 3px; padding: 8px; position: sticky; bottom: 0; background: var(--panel-bg); }
+.picked { padding: 6px 0; border-bottom: 1px solid var(--panel-border); }
+.picked .head { display: flex; justify-content: space-between; gap: 6px; }
+.more { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; margin-top: 4px; }
+.more label { display: flex; flex-direction: column; gap: 2px; color: var(--panel-muted); }
+.more .check { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 6px; }
+.doc-item { display: flex; flex-direction: column; align-items: flex-start; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--panel-border); border-radius: 0; padding: 6px 2px; }
+.doc-item .mark { font-weight: 700; }
+.ask { border: 1px solid var(--panel-danger); border-radius: 3px; padding: 8px; }
+.ask p { margin: 0 0 6px; }
+.styles li label { display: grid; grid-template-columns: auto 1fr; column-gap: 6px; padding: 5px 0; cursor: pointer; border-bottom: 1px solid var(--panel-border); }
+.styles .sub { grid-column: 2; }
