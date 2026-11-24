@@ -1,0 +1,19 @@
+{
+	"name": "Hearth Assistant",
+	"guid": "asc.{3F6A1C9E-52B7-4D0A-8E4B-7A1D9C0F2B61}",
+	"version": "0.1.0",
+	"minVersion": "9.0.0",
+	"variations": [
+		{
+			"description": "Drafts, rewrites and summarises text, explains spreadsheet formulas and turns notes into slides, using the document as context. Every model request goes through the Document Server's own proxy.",
+			"url": "index.html",
+			"icons": ["resources/icons/assistant.svg"],
+			"isViewer": false,
+			"EditorsSupport": ["word", "cell", "slide"],
+			"type": "background",
+			"initDataType": "none",
+			"buttons": [],
+			"events": ["onAIPluginSettings", "onToolbarMenuClick"]
+		}
+	]
+}

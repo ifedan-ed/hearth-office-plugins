@@ -1,0 +1,24 @@
+<!--
+ SPDX-FileCopyrightText: 2026 Hearth contributors
+ SPDX-License-Identifier: AGPL-3.0-only
+-->
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<title>Hearth Assistant</title>
+		<!-- The background page: no window of its own. The plugin SDK comes
+		     from the Document Server itself (sdkjs-plugins/v1); nothing is
+		     loaded from an outside site. Order matters: each script adds to
+		     window.HearthAI and main.js wires them together last. -->
+		<script src="../v1/plugins.js"></script>
+		<script src="../v1/plugins-ui.js"></script>
+		<script src="scripts/model.js"></script>
+		<script src="scripts/context.js"></script>
+		<script src="scripts/tasks.js"></script>
+		<script src="scripts/markup.js"></script>
+		<script src="scripts/apply.js"></script>
+		<script src="scripts/main.js"></script>
+	</head>
+	<body></body>
+</html>

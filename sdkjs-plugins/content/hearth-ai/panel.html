@@ -1,0 +1,36 @@
+<!--
+ SPDX-FileCopyrightText: 2026 Hearth contributors
+ SPDX-License-Identifier: AGPL-3.0-only
+-->
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>Assistant</title>
+		<script src="../v1/plugins.js"></script>
+		<script src="../v1/plugins-ui.js"></script>
+		<link rel="stylesheet" href="panel.css">
+	</head>
+	<body>
+		<!-- The side panel: the instruction, the answer as it is written, and
+		     what to do with it. It shows and reports; the background page
+		     (scripts/main.js) reads and changes the document. -->
+		<main>
+			<h1 id="task-name"></h1>
+			<div id="choices" hidden></div>
+			<textarea id="instruction" rows="3"></textarea>
+			<div class="row">
+				<button id="go" class="primary" type="button">Go</button>
+				<button id="stop" type="button" hidden>Stop</button>
+			</div>
+			<p id="problem" role="alert" hidden></p>
+			<section id="answer" aria-live="polite" hidden></section>
+			<div id="uses" class="row" hidden>
+				<label id="track-row" hidden><input id="track" type="checkbox" checked> Track change</label>
+			</div>
+		</main>
+		<script src="scripts/markup.js"></script>
+		<script src="scripts/panel.js"></script>
+	</body>
+</html>
