@@ -39,13 +39,47 @@
 		return true;
 	}
 
-	// insert adds the answer at the cursor. In a text document the answer's
-	// headings, lists and bold text become real formatting; slides and cells
-	// take plain text.
+	// Runs in the editor: builds real paragraphs from the answer's blocks
+	// (markup.toBlocks) and puts them in at the cursor as blocks of their
+	// own. Built with the document's own styles ("Heading 1", its body font)
+	// rather than pasted as HTML, so the text looks like the rest of the
+	// document and starts on a new line instead of running on from the
+	// paragraph the cursor is in.
+	function insertBlocks() {
+		const doc = Api.GetDocument();
+		const made = [];
+		let run = '', numbering = null; // the list the last block belonged to
+		Asc.scope.blocks.forEach(function (block) {
+			const paragraph = Api.CreateParagraph();
+			block.spans.forEach(function (span) {
+				const text = paragraph.AddText(span.text);
+				if (span.bold) text.SetBold(true);
+				if (span.italic) text.SetItalic(true);
+			});
+			if (block.kind === 'heading') {
+				const style = doc.GetStyle('Heading ' + block.level);
+				if (style) paragraph.SetStyle(style);
+			}
+			if (block.kind === 'bullet' || block.kind === 'number') {
+				// Neighbouring items share a list; a new run of numbered
+				// items starts again at 1.
+				if (run !== block.kind) numbering = doc.CreateNumbering(block.kind === 'bullet' ? 'bullet' : 'numbered');
+				paragraph.SetNumbering(numbering.GetLevel(0));
+			}
+			run = block.kind;
+			made.push(paragraph);
+		});
+		doc.InsertContent(made);
+		return made.length;
+	}
+
+	// insert adds the answer at the cursor, after the selection if there is
+	// one. In a text document the answer's headings, lists and bold text
+	// become real formatting; slides and cells take plain text.
 	async function insert(editor, markdown) {
 		if (editor !== 'word') return method('PasteText', [HearthAI.markup.toPlain(markdown)]);
 		await change(cursorToSelectionEnd);
-		return method('PasteHtml', [HearthAI.markup.toHtml(markdown)]);
+		return change(insertBlocks, { blocks: HearthAI.markup.toBlocks(markdown) });
 	}
 
 	// Run in the editor: switch change tracking on and report how it was, and
@@ -88,19 +122,33 @@
 		const presentation = Api.GetPresentation();
 		const master = presentation.GetMaster(0);
 		const layout = master ? (master.GetLayoutByType('obj') || master.GetLayout(0)) : null;
-		const holder = function (slide, type) {
-			const present = slide.GetDrawingsByPlaceholderType(type);
-			if (present && present.length) return present[0];
-			const model = layout ? layout.GetDrawingsByPlaceholderType(type)[0] : null;
+		// The two places text goes, by the placeholder types that can stand
+		// for them. A layout's content box is "body" in some decks, "object"
+		// in others, and most often carries no type at all, which the file
+		// format reads as "object" and the editor reports as "unknown".
+		const kinds = { title: ['title', 'ctrTitle'], body: ['body', 'object', 'unknown', 'subTitle'] };
+		const find = function (owner, kind) {
+			const drawings = owner.GetAllDrawings();
+			for (let i = 0; i < drawings.length; i++) {
+				let type = '';
+				try { const placeholder = drawings[i].GetPlaceholder(); type = placeholder ? placeholder.GetType() : ''; } catch (e) { type = ''; }
+				if (kinds[kind].indexOf(type) >= 0) return { shape: drawings[i], type: type };
+			}
+			return null;
+		};
+		const holder = function (slide, kind) {
+			const present = find(slide, kind);
+			if (present) return present.shape;
+			const model = layout ? find(layout, kind) : null;
 			if (!model) return null;
-			const shape = Api.CreateShape('rect', model.GetWidth(), model.GetHeight(), Api.CreateNoFill(), Api.CreateStroke(0, Api.CreateNoFill()));
-			shape.SetPosition(model.GetPosX(), model.GetPosY());
-			shape.SetPlaceholder(Api.CreatePlaceholder(type));
+			const shape = Api.CreateShape('rect', model.shape.GetWidth(), model.shape.GetHeight(), Api.CreateNoFill(), Api.CreateStroke(0, Api.CreateNoFill()));
+			shape.SetPosition(model.shape.GetPosX(), model.shape.GetPosY());
+			shape.SetPlaceholder(Api.CreatePlaceholder(model.type === 'unknown' ? 'object' : model.type));
 			slide.AddObject(shape);
 			return shape;
 		};
-		const fill = function (slide, type, lines) {
-			const shape = holder(slide, type);
+		const fill = function (slide, kind, lines) {
+			const shape = holder(slide, kind);
 			if (!shape || !lines.length) return;
 			const content = shape.GetDocContent();
 			content.RemoveAllElements();

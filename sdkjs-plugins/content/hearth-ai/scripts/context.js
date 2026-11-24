@@ -78,9 +78,8 @@
 	// --- Spreadsheets ------------------------------------------------------
 
 	// readCell describes the active cell and every cell or range its formula
-	// names, each with the nearest text above it (its column heading) and to
-	// its left (its row label): what a person looks at to understand a
-	// formula.
+	// names, each with its column heading and its row label: what a person
+	// looks at to understand a formula.
 	function readCell() {
 		const active = Api.GetActiveSheet();
 		const cell = active.GetActiveCell();
@@ -92,12 +91,32 @@
 		const textAt = function (sheet, row, col) {
 			try { return String(sheet.GetRangeByNumber(row - 1, col - 1).GetText() || ''); } catch (e) { return ''; }
 		};
-		// The nearest cell holding words (not a number, not empty), walking
-		// up for a column heading or left for a row label.
-		const labelNear = function (sheet, row, col, stepRow, stepCol) {
-			for (let r = row + stepRow, c = col + stepCol, n = 0; r >= 1 && c >= 1 && n < 60; r += stepRow, c += stepCol, n++) {
-				const t = textAt(sheet, r, c).trim();
-				if (t && isNaN(Number(t.replace(/[,%\s]/g, '')))) return t;
+		const isWords = function (t) { return !!t && isNaN(Number(t.replace(/[,%\s]/g, ''))); };
+		// The heading row of a sheet: the first row near the top with words
+		// in at least two cells. A lone title above the table is passed over,
+		// and a column of words (categories) is not taken for its own
+		// heading, which "the nearest words above" would do.
+		const headingRows = {};
+		const headingRow = function (sheet) {
+			const key = sheet.GetName();
+			if (headingRows[key] !== undefined) return headingRows[key];
+			headingRows[key] = 0;
+			for (let r = 1; r <= 20 && !headingRows[key]; r++) {
+				let found = 0;
+				for (let c = 1; c <= 15; c++) if (isWords(textAt(sheet, r, c).trim())) found++;
+				if (found >= 2) headingRows[key] = r;
+			}
+			return headingRows[key];
+		};
+		const headingOf = function (sheet, row, col) {
+			const top = headingRow(sheet);
+			return top && row > top ? textAt(sheet, top, col).trim() : '';
+		};
+		// The row's label: the first words in the row, left of the cell.
+		const labelOf = function (sheet, row, col) {
+			for (let c = 1; c < col && c <= 15; c++) {
+				const t = textAt(sheet, row, c).trim();
+				if (isWords(t)) return t;
 			}
 			return '';
 		};
@@ -106,7 +125,7 @@
 		const out = {
 			sheet: active.GetName(), address: cell.GetAddress(false, false, 'xlA1', false),
 			formula: formula, value: String(cell.GetText() || ''),
-			heading: labelNear(active, row, col, -1, 0), label: labelNear(active, row, col, 0, -1), refs: [],
+			heading: headingOf(active, row, col), label: labelOf(active, row, col), refs: [],
 		};
 		if (formula.charAt(0) !== '=') return out;
 
@@ -141,7 +160,7 @@
 			out.refs.push({
 				ref: match[0], cells: (r2 - r1 + 1) * (c2 - c1 + 1), rows: rows,
 				formula: own.charAt(0) === '=' ? own : '',
-				heading: labelNear(sheet, r1, c1, -1, 0), label: r1 === r2 ? labelNear(sheet, r1, c1, 0, -1) : '',
+				heading: headingOf(sheet, r1, c1), label: r1 === r2 ? labelOf(sheet, r1, c1) : '',
 			});
 		}
 		return out;
