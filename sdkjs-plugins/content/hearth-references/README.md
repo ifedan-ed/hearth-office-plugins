@@ -23,4 +23,9 @@ co-author who uses Zotero in Word or LibreOffice, and the reverse.
 - Field results are written as formatted paragraphs through
   AddinFieldData.Paragraphs, a Hearth Office extension of the plugin API.
 
+- translations/langs.json is an empty list: the add-in is in English only.
+  The plugin SDK asks each page for this list when the editor's language
+  is not en-EN; with it there the SDK stops after one answer instead of
+  two 404s (langs.json, then the language's own file).
+
 Tests (not shipped: dot-folders stay out of the image): `node --test .tests/fields.test.mjs`.

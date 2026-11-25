@@ -49,5 +49,6 @@ The Hearth Office image has it built in.
 | scripts/apply.js | Putting an answer into the document |
 | scripts/markup.js | The small Markdown subset answers use, as HTML or plain text |
 | panel.html, scripts/panel.js, panel.css | The side panel |
+| translations/langs.json | An empty list of translations: the add-in is in English only. The plugin SDK asks every page for this list when the editor's language is not en-EN; with the list there it stops after one answer instead of two 404s (langs.json, then the language's own file) |
 
 No build step: plain scripts, no dependencies.
