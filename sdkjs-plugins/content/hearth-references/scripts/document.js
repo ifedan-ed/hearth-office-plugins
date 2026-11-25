@@ -47,15 +47,20 @@
 		return k ? { id: f.FieldId, kind: k, value: f.Value, content: f.Content || '' } : null;
 	}
 
-	// insert puts a new field at the cursor, moves the cursor past it and
-	// gives the keyboard back to the document, so typing goes on after the
-	// citation, not inside it or in the panel.
+	// insert puts a new field at the cursor and moves the cursor past it,
+	// so typing goes on after the citation, not inside it.
 	async function insert(value, paragraphs) {
 		await method('AddAddinField', [{ FieldId: '', Value: value, Content: ' ', Paragraphs: paragraphs }]);
 		const f = await method('GetCurrentAddinField');
 		await command(function () { Api.GetDocument().MoveCursorRight(1, false); });
-		await method('FocusEditor');
 		return f ? f.FieldId : '';
+	}
+
+	// focus gives the keyboard back to the document. Called as the last
+	// step of an action started in the panel: the click there left the
+	// keyboard in the panel, and anything typed next would be lost.
+	function focus() {
+		return method('FocusEditor');
 	}
 
 	// update changes fields: [{ id, value?, paragraphs? }].
@@ -111,5 +116,5 @@
 	}
 
 	window.HearthRefs = window.HearthRefs || {};
-	window.HearthRefs.doc = { fields: fields, current: current, insert: insert, update: update, select: select, unlink: unlink, readPrefs: readPrefs, writePrefs: writePrefs };
+	window.HearthRefs.doc = { fields: fields, current: current, insert: insert, focus: focus, update: update, select: select, unlink: unlink, readPrefs: readPrefs, writePrefs: writePrefs };
 })(window);

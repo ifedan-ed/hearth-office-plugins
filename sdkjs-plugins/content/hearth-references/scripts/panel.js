@@ -314,8 +314,19 @@
 	});
 	window.Asc.plugin.attachEvent('onDocument', drawDocument);
 	window.Asc.plugin.attachEvent('onProblem', function (text) { problem(text); el('insert').disabled = cluster.length === 0; });
+	// giveBack hands the keyboard back to the document after an insert or
+	// an edit. The click on Insert put the browser's focus in this panel's
+	// frame; the editor focusing its own input does not take it back from
+	// another frame, so the panel lets go of it itself.
+	function giveBack() {
+		try { if (document.activeElement) document.activeElement.blur(); } catch (e) { /* nothing focused */ }
+		try { window.parent.focus(); } catch (e) { /* another origin: the editor's own call below still runs */ }
+		window.Asc.plugin.executeMethod('FocusEditor');
+	}
+
 	window.Asc.plugin.attachEvent('onDone', function (what) {
 		const words = { inserted: 'Citation inserted', edited: 'Citation saved', styled: 'Style applied', refreshed: 'Citations updated', current: 'Citations are up to date' };
+		if (what === 'inserted' || what === 'edited') giveBack();
 		status(words[what] || '');
 		if (what === 'inserted' || what === 'edited') {
 			cluster = [];

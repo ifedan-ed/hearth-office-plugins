@@ -82,6 +82,9 @@
 		panel.attachEvent('onInsert', function (items) {
 			serial(async function () {
 				await R.citations.insertCitation(items);
+				// The keyboard goes back to the document before the panel
+				// says it is done, so typing on at once lands in the text.
+				await R.doc.focus();
 				say('onDone', 'inserted');
 				say('onDocument', await documentCitations());
 			});
@@ -92,6 +95,9 @@
 				const f = all.find(function (y) { return y.id === x.id; });
 				if (!f) return;
 				await R.citations.editCitation(f.id, f.value, x.items);
+				// The keyboard goes back to the document before the panel
+				// says it is done, so typing on at once lands in the text.
+				await R.doc.focus();
 				say('onDone', 'edited');
 				say('onDocument', await documentCitations());
 			});
