@@ -1,7 +1,7 @@
 # References
 
 Hearth's citation add-in for Hearth Office's document editor: a
-References tab that cites from the person's Hearth library and PubMed,
+Citations tab (the editor's own References tab is for contents and notes) that cites from the person's Hearth library and PubMed,
 keeps the bibliography in the document's citation style, and stores every
 citation in Zotero's own Word field format, so a paper stays live for a
 co-author who uses Zotero in Word or LibreOffice, and the reverse.
@@ -10,7 +10,7 @@ co-author who uses Zotero in Word or LibreOffice, and the reverse.
   marked by where they come from, a paper in both shown once), pick one
   or more, give each a page, prefix or suffix, Insert.
 - Edit citation, Bibliography, Refresh, Style (the whole document's),
-  Citations (the document's citation marks; a click selects one; Unlink
+  Citation list (the document's citation marks; a click selects one; Unlink
   turns them into plain text).
 - Fields: `ADDIN ZOTERO_ITEM CSL_CITATION {json}` per citation,
   `ADDIN ZOTERO_BIBL {...} CSL_BIBLIOGRAPHY` for the bibliography, the

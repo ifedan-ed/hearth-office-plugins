@@ -47,12 +47,14 @@
 		return k ? { id: f.FieldId, kind: k, value: f.Value, content: f.Content || '' } : null;
 	}
 
-	// insert puts a new field at the cursor and moves the cursor past it,
-	// so typing goes on after the citation, not inside it.
+	// insert puts a new field at the cursor, moves the cursor past it and
+	// gives the keyboard back to the document, so typing goes on after the
+	// citation, not inside it or in the panel.
 	async function insert(value, paragraphs) {
 		await method('AddAddinField', [{ FieldId: '', Value: value, Content: ' ', Paragraphs: paragraphs }]);
 		const f = await method('GetCurrentAddinField');
 		await command(function () { Api.GetDocument().MoveCursorRight(1, false); });
+		await method('FocusEditor');
 		return f ? f.FieldId : '';
 	}
 

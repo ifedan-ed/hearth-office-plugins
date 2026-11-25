@@ -1,7 +1,9 @@
 // SPDX-FileCopyrightText: 2026 Hearth contributors
 // SPDX-License-Identifier: AGPL-3.0-only
 //
-// The background page of References: the toolbar tab, the side panel,
+// The background page of References: the toolbar tab (named Citations:
+// the editor has a References tab of its own, for contents and notes),
+// the side panel,
 // and every change to the document. The panel (panel.html) searches and
 // shows; only this page reads or changes the document (document.js,
 // citations.js), so two changes never race.
@@ -150,7 +152,7 @@
 			{ id: 'bibliography', text: 'Bibliography', hint: 'Insert or update the bibliography', icon: 'bibliography' },
 			{ id: 'refresh', text: 'Refresh', hint: 'Format every citation again', icon: 'refresh' },
 			{ id: 'style', text: 'Style', hint: 'The citation style for the whole document', icon: 'style' },
-			{ id: 'list', text: 'Citations', hint: 'The citations in this document', icon: 'list', separator: true },
+			{ id: 'list', text: 'Citation list', hint: 'The citations in this document', icon: 'list', separator: true },
 		].map(function (b) {
 			return {
 				id: 'hearth_refs_' + b.id, type: 'big-button', text: b.text, hint: b.hint,
@@ -158,7 +160,7 @@
 				lockInViewMode: true, enableToggle: false, separator: !!b.separator,
 			};
 		});
-		window.Asc.plugin.executeMethod('AddToolbarMenuItem', [{ guid: window.Asc.plugin.guid, tabs: [{ id: TAB, text: 'References', items: items }] }]);
+		window.Asc.plugin.executeMethod('AddToolbarMenuItem', [{ guid: window.Asc.plugin.guid, tabs: [{ id: TAB, text: 'Citations', items: items }] }]);
 	};
 
 	window.Asc.plugin.event_onToolbarMenuClick = function (id) {
