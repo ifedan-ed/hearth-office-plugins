@@ -34,6 +34,7 @@
 /// <reference path="./types.js" />
 
 import { CitationItem } from "./citation-item";
+import { SCHEMA, randomID } from "../../hearth/zotero-format";
 
 /**
  * @typedef {Object} CitationJsonData
@@ -80,8 +81,8 @@ class CSLCitation {
         /** @type {Object<string, string|boolean>} */
         this._manualOverride = {}; // for mendeley
 
-        this._schema =
-            "https://raw.githubusercontent.com/citation-style-language/schema/master/schemas/input/csl-citation.json";
+        // Hearth: the schema address Zotero writes.
+        this._schema = SCHEMA;
     }
 
     static resetUsedIDs() {
@@ -303,6 +304,17 @@ class CSLCitation {
     }
 
     /**
+     * Hearth: the citation's HTML from citeproc, kept in the field as
+     * Zotero keeps it.
+     * @param {string} formattedCitation
+     * @returns
+     */
+    setFormattedCitation(formattedCitation) {
+        this.#setProperties({ formattedCitation: formattedCitation });
+        return this;
+    }
+
+    /**
      * @param {string} plainCitation
      * @returns
      */
@@ -365,7 +377,8 @@ class CSLCitation {
      * @returns {string}
      */
     #generateId() {
-        return Math.random().toString(36).substring(2, 15); // o4wi5z43own for example
+        // Hearth: eight letters and digits, as Zotero makes them.
+        return randomID();
     }
     validate() {
         var errors = [];
@@ -384,17 +397,32 @@ class CSLCitation {
         return errors.length === 0 ? true : errors;
     }
 
+    /**
+     * The citation as Zotero writes it, in Zotero's order: citationID,
+     * properties (formattedCitation, plainCitation, noteIndex, then any
+     * other), citationItems, schema. (Hearth: was citationID, schema,
+     * properties, citationItems.)
+     */
     toJSON() {
         var result = /** @type {any} */ ({
             citationID: this.citationID,
-            schema: this._schema,
         });
 
         if (this._properties && Object.keys(this._properties).length > 0) {
-            result.properties = this._properties;
-        }
-        if (this._manualOverride && Object.keys(this._manualOverride).length > 0) {
-            result.manualOverride = this._manualOverride;
+            /** @type {Object<string, string|number|boolean>} */
+            const properties = {};
+            const self = this;
+            ["formattedCitation", "plainCitation", "noteIndex"]
+                .concat(Object.keys(this._properties))
+                .forEach(function (key) {
+                    if (
+                        !Object.hasOwnProperty.call(properties, key) &&
+                        Object.hasOwnProperty.call(self._properties, key)
+                    ) {
+                        properties[key] = self._properties[key];
+                    }
+                });
+            result.properties = properties;
         }
 
         if (this._citationItems && this._citationItems.length > 0) {
@@ -402,6 +430,10 @@ class CSLCitation {
                 return item.toJSON();
             });
         }
+        if (this._manualOverride && Object.keys(this._manualOverride).length > 0) {
+            result.manualOverride = this._manualOverride;
+        }
+        result.schema = this._schema;
 
         return result;
     }

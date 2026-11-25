@@ -36,19 +36,32 @@
 
 import { CslStylesStorage } from "./storage";
 import { CslStylesParser } from "./style-parser";
+import {
+    resolveStyleName,
+    styleFullId,
+} from "../../hearth/zotero-format";
+
+// Hearth: styles come only from the plugin's own folder, the same set
+// Hearth bundles (resources/csl/styles: index.json lists them,
+// renamed.json is the CSL repository's renamed-styles.json). Upstream
+// fetched styles.json and the styles from www.zotero.org when it could.
+
+/**
+ * One bundled style, as resources/csl/styles/index.json lists it.
+ * @typedef {Object} BundledStyle
+ * @property {string} id - the style's full id
+ * @property {string} file - its file in resources/csl/styles
+ * @property {string} title
+ * @property {"numeric"|"author-date"|"note"} kind
+ * @property {string} [parent] - a dependent style's parent's id
+ */
 
 /**
  * @param {string} lastStyleKey
  */
 function CslStylesManager(lastStyleKey) {
-    this._isOnlineAvailable = false;
-    this._isDesktopAvailable = false;
-
     this._customStylesStorage = new CslStylesStorage();
 
-    this._STYLES_JSON_URL = "https://www.zotero.org/styles-files/styles.json";
-    this._STYLES_JSON_LOCAL = "./resources/csl/styles.json";
-    this._STYLES_URL = "https://www.zotero.org/styles/";
     this._STYLES_LOCAL = "./resources/csl/styles/";
 
     this._lastStyleKey = lastStyleKey;
@@ -56,22 +69,59 @@ function CslStylesManager(lastStyleKey) {
     this._lastFormatKey = "zoteroFormatId";
     this._lastUsedStyleContainBibliographyKey = "zoteroContainBibliography";
 
-    this._defaultStyles = [
-        "american-anthropological-association",
-        "american-medical-association",
-        "american-political-science-association",
-        "american-sociological-association",
-        "apa",
-        "chicago-author-date",
-        "chicago-notes-bibliography",
-        "harvard-cite-them-right",
-        "ieee",
-        "modern-language-association",
-        "nature",
-    ];
+    // Hearth: the default for a document with no style yet is Hearth's
+    // own (NLM/Vancouver, citation-sequence), so both tabs start alike.
+    this._defaultStyle = "nlm-citation-sequence";
+
+    /** @type {Promise<{styles: Array<BundledStyle>, renamed: Object<string, string>}> | null} */
+    this._index = null;
 
     /** @type {Object.<string, string>} */
     this._cache = {};
+}
+
+/**
+ * The bundled styles and the renamed ones, read once.
+ * @returns {Promise<{styles: Array<BundledStyle>, renamed: Object<string, string>}>}
+ */
+CslStylesManager.prototype._loadIndex = function () {
+    const self = this;
+    if (!this._index) {
+        this._index = Promise.all([
+            this._fetchLocal("index.json").then(function (text) {
+                return JSON.parse(text);
+            }),
+            this._fetchLocal("renamed.json").then(function (text) {
+                return JSON.parse(text);
+            }),
+        ]).then(function (both) {
+            return { styles: both[0], renamed: both[1] };
+        });
+        this._index.catch(function () {
+            self._index = null;
+        });
+    }
+    return this._index;
+};
+
+/**
+ * @param {string} file - a file in resources/csl/styles
+ * @returns {Promise<string>}
+ */
+CslStylesManager.prototype._fetchLocal = function (file) {
+    return fetch(this._STYLES_LOCAL + file).then(function (resp) {
+        if (!resp.ok) throw "A citation style file is missing: " + file;
+        return resp.text();
+    });
+};
+
+/**
+ * A bundled style's short name (its file's name).
+ * @param {BundledStyle} style
+ * @returns {string}
+ */
+function bundledName(style) {
+    return style.file.replace(/\.csl$/, "");
 }
 
 /**
@@ -96,10 +146,6 @@ CslStylesManager.prototype.addCustomStyle = function (file) {
         resolve(fileName);
     }).then(function (fileName) {
         return self._readCSLFile(file).then(function (content) {
-            if (self._defaultStyles.indexOf(fileName) === -1) {
-                self._defaultStyles.push(fileName);
-            }
-
             return self._customStylesStorage.setStyle(fileName, content);
         });
     });
@@ -150,14 +196,54 @@ CslStylesManager.prototype.getLastUsedStyleId = function () {
  * @returns {string} - style id
  */
 CslStylesManager.prototype.getLastUsedStyleIdOrDefault = function () {
-    let lastUsedStyle = localStorage.getItem(this._lastStyleKey);
-    if (lastUsedStyle) {
-        return lastUsedStyle;
-    }
-    return "ieee";
+    return this.getLastUsedStyleId() || this._defaultStyle;
 };
 
 /**
+ * @returns {string} - the style a document with none starts with
+ */
+CslStylesManager.prototype.getDefaultStyle = function () {
+    return this._defaultStyle;
+};
+
+/**
+ * Hearth: the full id Zotero names a style by in the document's
+ * preferences: a bundled style's id, a custom style's own <id>.
+ * @param {string} styleName
+ * @returns {Promise<string>}
+ */
+CslStylesManager.prototype.getStyleFullId = function (styleName) {
+    const custom = this._customStylesStorage.getStyle(styleName);
+    if (custom) {
+        const id = /<id>\s*([^<\s]+)\s*<\/id>/.exec(custom);
+        return Promise.resolve(id ? id[1] : styleFullId(styleName));
+    }
+    return this._loadIndex().then(function (index) {
+        const found = index.styles.find(function (s) {
+            return bundledName(s) === styleName;
+        });
+        return found ? found.id : styleFullId(styleName);
+    });
+};
+
+/**
+ * Hearth: the bundled style a document's preferences name (also by an old,
+ * renamed id), or null when it is not bundled.
+ * @param {string} styleID
+ * @returns {Promise<string|null>}
+ */
+CslStylesManager.prototype.resolveDocumentStyle = function (styleID) {
+    const customNames = this._customStylesStorage.getStyleNames();
+    return this._loadIndex().then(function (index) {
+        const names = index.styles.map(bundledName).concat(customNames);
+        return resolveStyleName(styleID, names, index.renamed);
+    });
+};
+
+/**
+ * The style's CSL text: a custom one's, a bundled one's, or for a
+ * journal's dependent style its parent's rules in the journal's locale
+ * (as Hearth formats it).
  * @param {string} styleName
  * @param {boolean} saveToLocalStorage
  * @returns {Promise<{content: string|null, styleFormat: StyleFormat}>} - csl file content
@@ -173,39 +259,11 @@ CslStylesManager.prototype.getStyle = function (
             if (self._cache[styleName]) {
                 return self._cache[styleName];
             }
-            const customStyleNames = self._customStylesStorage.getStyleNames();
-            if (customStyleNames.indexOf(styleName) !== -1) {
-                return self._customStylesStorage.getStyle(styleName);
+            const custom = self._customStylesStorage.getStyle(styleName);
+            if (custom) {
+                return custom;
             }
-            let url = self._STYLES_LOCAL + styleName + ".csl";
-            if (self._isOnlineAvailable) {
-                url = self._STYLES_URL + styleName;
-            } else if (self._defaultStyles.indexOf(styleName) === -1) {
-                throw "The style is not available in the local version of the plugin.";
-            }
-            return fetch(url).then(function (resp) {
-                return resp.text();
-            });
-        })
-        .then(function (content) {
-            if (
-                content &&
-                !self._isValidCSL(content) &&
-                self._isOnlineAvailable
-            ) {
-                /** @type {StyleInfo} */
-                let styleInfo = CslStylesParser.getStyleInfo(
-                    styleName,
-                    content
-                );
-                if (styleInfo && styleInfo.dependent > 0 && styleInfo.parent) {
-                    return fetch(styleInfo.parent).then(function (resp) {
-                        return resp.text();
-                    });
-                }
-            }
-
-            return content;
+            return self._loadBundled(styleName);
         })
         .then(function (content) {
             const styleFormat =
@@ -215,6 +273,9 @@ CslStylesManager.prototype.getStyle = function (
                 content: content,
                 styleFormat: styleFormat,
             };
+            if (content) {
+                self._cache[styleName] = content;
+            }
             if (content && saveToLocalStorage) {
                 self._saveLastUsedStyle(styleName, content, styleFormat);
             }
@@ -224,59 +285,78 @@ CslStylesManager.prototype.getStyle = function (
 };
 
 /**
+ * @param {string} styleName
+ * @returns {Promise<string>}
+ */
+CslStylesManager.prototype._loadBundled = function (styleName) {
+    const self = this;
+    return this._loadIndex().then(function (index) {
+        /** @param {string} name */
+        const byName = function (name) {
+            return index.styles.find(function (s) {
+                return bundledName(s) === name;
+            });
+        };
+        const name = resolveStyleName(
+            styleName,
+            index.styles.map(bundledName),
+            index.renamed
+        );
+        const info = name ? byName(name) : null;
+        if (!info) {
+            throw "The style is not available in the local version of the plugin.";
+        }
+        return self._fetchLocal(info.file).then(function (xml) {
+            if (!info.parent) return xml;
+            const parent = index.styles.find(function (s) {
+                return s.id === info.parent;
+            });
+            if (!parent) {
+                throw "The style is not available in the local version of the plugin.";
+            }
+            const lang = /default-locale="([^"]+)"/.exec(xml);
+            return self._fetchLocal(parent.file).then(function (parentXml) {
+                if (!lang) return parentXml;
+                return parentXml
+                    .replace(/<style\b/, '<style default-locale="' + lang[1] + '"')
+                    .replace(
+                        /(<style\b[^>]*?) default-locale="[^"]*"([^>]*default-locale=)/,
+                        "$1$2"
+                    );
+            });
+        });
+    });
+};
+
+/**
  * @returns {Promise<Array<StyleInfo>>}
  */
 CslStylesManager.prototype.getStylesInfo = function () {
     const self = this;
-    return Promise.all([
-        this._getStylesJson(),
-        this._customStylesStorage.getStylesInfo(),
-    ]).then(function (styles) {
-        var lastStyle = self.getLastUsedStyleId() || "ieee";
+    return this._loadIndex().then(function (index) {
         /** @type {Array<StyleInfo>} */
-        var resultStyles = [];
-        var resultStyleNames = self._customStylesStorage.getStyleNames();
-        /** @type {Array<StyleInfo>} */
-        var loadedStyles = styles[0];
-        /** @type {Array<StyleInfo>} */
-        var customStyles = styles[1];
+        var resultStyles = self._customStylesStorage.getStylesInfo();
+        var customNames = self._customStylesStorage.getStyleNames();
 
-        if (self._isDesktopAvailable && !self._isOnlineAvailable) {
-            loadedStyles = loadedStyles.filter(function (style) {
-                return (
-                    self._defaultStyles.indexOf(style.name) >= 0 ||
-                    style.name == lastStyle
-                );
-            });
-        }
-
-        customStyles.forEach(function (style) {
-            resultStyles.push(style);
-            if (self._defaultStyles.indexOf(style.name) === -1) {
-                self._defaultStyles.push(style.name);
-            }
-        });
-
-        loadedStyles.forEach(function (style) {
-            if (resultStyleNames.indexOf(style.name) !== -1) {
+        index.styles.forEach(function (style) {
+            const name = bundledName(style);
+            if (customNames.indexOf(name) !== -1) {
                 // already added
                 return;
             }
-            resultStyles.push(style);
+            resultStyles.push({
+                categories: { fields: [], format: style.kind },
+                dependent: style.parent ? 1 : 0,
+                parent: style.parent,
+                href: style.id,
+                name: name,
+                title: style.title,
+                updated: "",
+            });
         });
-        resultStyles.sort((a, b) => a.name.localeCompare(b.name));
+        resultStyles.sort((a, b) => a.title.localeCompare(b.title));
 
         return resultStyles;
-    });
-};
-
-CslStylesManager.prototype._getStylesJson = function () {
-    let url = this._STYLES_JSON_LOCAL;
-    if (this._isOnlineAvailable) {
-        url = this._STYLES_JSON_URL;
-    }
-    return fetch(url).then(function (resp) {
-        return resp.json();
     });
 };
 
@@ -299,14 +379,6 @@ CslStylesManager.prototype.isLastUsedStyleContainBibliography = function () {
         this._lastUsedStyleContainBibliographyKey
     );
     return containBibliography !== "false";
-};
-
-/**
- * @param {string} styleName
- * @returns {boolean}
- */
-CslStylesManager.prototype.isStyleDefault = function (styleName) {
-    return this._defaultStyles.indexOf(styleName) >= 0;
 };
 
 /**
@@ -379,19 +451,6 @@ CslStylesManager.prototype._saveLastUsedStyle = function (
  */
 CslStylesManager.prototype.saveLastUsedNotesStyle = function (notesStyle) {
     localStorage.setItem(this._lastNotesStyleKey, notesStyle);
-};
-
-/**
- * @param {boolean} isApiAvailable
- */
-CslStylesManager.prototype.setDesktopApiAvailable = function (isApiAvailable) {
-    this._isDesktopAvailable = isApiAvailable;
-};
-/**
- * @param {boolean} isApiAvailable
- */
-CslStylesManager.prototype.setRestApiAvailable = function (isApiAvailable) {
-    this._isOnlineAvailable = isApiAvailable;
 };
 
 export { CslStylesManager };

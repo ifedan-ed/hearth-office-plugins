@@ -34,6 +34,7 @@
 
 /// <reference path="./types.js" />
 import { CitationItemData } from "./citation-item-data";
+import { canonicalUris } from "../../hearth/zotero-format";
 
 /**
  * @param {string|number} id
@@ -246,6 +247,12 @@ CitationItem.prototype.addUri = function (uri) {
 };
 
 /**
+ * The item as Zotero writes it in a citation, in Zotero's order: id,
+ * uris, itemData, locator, label, prefix, suffix, suppress-author.
+ * Hearth: the uris are Zotero's canonical item URIs
+ * (http://zotero.org/users/<id>/items/<key>, groups likewise), which
+ * Zotero desktop recognises, made from the web API's links; was the API
+ * links as they came.
  * @param {boolean} [bCompressed]
  * @returns 
  */
@@ -253,20 +260,25 @@ CitationItem.prototype.toJSON = function (bCompressed) {
     var result = {};
     result.id = this.id;
 
+    const uris = canonicalUris(this._uris, {
+        userID: /** @type {any} */ (this._itemData.getCustomProperty("userID")),
+        groupID: /** @type {any} */ (this._itemData.getCustomProperty("groupID")),
+        key: this.id,
+    });
+    if (uris.length) result.uris = uris;
     if (this._itemData) {
         result.itemData = this._itemData.toJSON
             ? this._itemData.toJSON(bCompressed || false)
             : this._itemData;
     }
-    if (this._prefix !== undefined) result.prefix = this._prefix;
-    if (this._suffix !== undefined) result.suffix = this._suffix;
     if (this._locator !== undefined) result.locator = this._locator;
     if (this._label !== undefined) result.label = this._label;
+    if (this._prefix !== undefined) result.prefix = this._prefix;
+    if (this._suffix !== undefined) result.suffix = this._suffix;
     if (this._suppressAuthor !== undefined)
         result["suppress-author"] = this._suppressAuthor;
     if (this._authorOnly !== undefined)
         result["author-only"] = this._authorOnly;
-    if (this._uris.length) result.uris = this._uris;
 
     return result;
 };

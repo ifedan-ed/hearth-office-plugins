@@ -46,6 +46,26 @@ import { CitationDocService } from "./citation-doc-service";
 import { translate } from "./translate-service";
 import { CSLCitation, CSLCitationStorage } from "../csl/citation";
 import { AdditionalWindow } from "../pages/additional-window";
+import {
+    fieldKind,
+    citationValue,
+    bibliographyValue,
+    prefsXML,
+    prefsChunks,
+    readPrefs,
+    randomID,
+} from "../hearth/zotero-format";
+import { htmlParagraphs } from "../hearth/runs";
+
+/** @typedef {import("../hearth/runs").Para} Para */
+/** @typedef {AddinFieldData & {Paragraphs?: Array<Para>}} ResultField */
+
+// Hearth: citations and the bibliography are written in Zotero's own
+// format (hearth/zotero-format.js) with their results as formatted
+// paragraphs (hearth/runs.js), formatted with citeproc-js 2.4.63 and the
+// bundled styles as Hearth's References tab formats them: all citations
+// at once, in document order (rebuildProcessorState), without forcing the
+// language over a style's own.
 
 class CitationService {
     /** @type {AdditionalWindow} */
@@ -59,24 +79,13 @@ class CitationService {
     constructor(localesManager, cslStylesManager, sdk) {
         this._bibPlaceholderIfEmpty =
             "Please insert some citation into the document.";
-        this._citPrefixNew = "ZOTERO_ITEM";
-        this._citSuffixNew = "CSL_CITATION";
-        this._citPrefix = "ZOTERO_CITATION";
-        this._bibPrefixNew = "ZOTERO_BIBL";
-        this._bibSuffixNew = "CSL_BIBLIOGRAPHY";
-        this._bibPrefix = "ZOTERO_BIBLIOGRAPHY";
         this._sdk = sdk;
         this._localesManager = localesManager;
         this._cslStylesManager = cslStylesManager;
         this._storage = new CSLCitationStorage();
         /** @type {CSL.Engine} */
         this._formatter;
-        this.citationDocService = new CitationDocService(
-            this._citPrefixNew,
-            this._citSuffixNew,
-            this._bibPrefixNew,
-            this._bibSuffixNew,
-        );
+        this.citationDocService = new CitationDocService();
         this.#additionalWindow = new AdditionalWindow();
     }
 
@@ -86,57 +95,54 @@ class CitationService {
      */
     #formatInsertLink(cslCitation) {
         const self = this;
-        let bUpdateItems = false;
 
         return Promise.resolve()
             .then(function () {
-                cslCitation
-                    .getCitationItems()
-                    .forEach(function (/** @type {CitationItem} */ item) {
-                        if (!self._storage.hasItem(item.id)) {
-                            bUpdateItems = true;
-                        }
-                    });
-
-                if (bUpdateItems) {
-                    /** @type {string[]} */
-                    var arrIds = [];
-                    self._storage.forEachItem(function (item, id) {
-                        arrIds.push(id);
-                    });
-                    self._formatter.updateItems(arrIds);
-                }
+                // The new citation's items are in the storage; citeproc
+                // learns of them here. (Upstream tested for items missing
+                // from the storage after adding them to it, so it never
+                // did.)
+                /** @type {string[]} */
+                var arrIds = [];
+                self._storage.forEachItem(function (item, id) {
+                    arrIds.push(id);
+                });
+                self._formatter.updateItems(arrIds);
             })
             .then(function () {
-                const fragment = document.createDocumentFragment();
-                const tempElement = document.createElement("div");
-
-                const citationsPre = self._storage.getCitationsPre(cslCitation.citationID);
-                const citationsPost = self._storage.getCitationsPost(cslCitation.citationID);;
-
-                const citations = self._storage.getAllCitationsInJson();
-                self._formatter.rebuildProcessorState(citations);
-                
-                const formattedCitationObj = self._formatter.processCitationCluster(
-                    cslCitation.toJSON(),
-                    citationsPre,
-                    citationsPost
-                );
-
-                let htmlCitation = self.#unEscapeHtml(formattedCitationObj[1][0][1]);
-                fragment.appendChild(tempElement);
-                tempElement.innerHTML = htmlCitation;
-                cslCitation.setPlainCitation(tempElement.innerText);
+                const html =
+                    self.#formatCitations().get(cslCitation.citationID) || "";
+                const runs = htmlParagraphs(html);
+                cslCitation.setFormattedCitation(html);
+                cslCitation.setPlainCitation(runs.plain);
                 let notesStyle = null;
                 if ("note" === self._cslStylesManager.getLastUsedFormat()) {
                     notesStyle = self._cslStylesManager.getLastUsedNotesStyle();
                 }
                 return self.citationDocService.addCitation(
-                    htmlCitation,
-                    JSON.stringify(cslCitation.toJSON()),
+                    runs.paragraphs,
+                    citationValue(cslCitation.toJSON()),
                     notesStyle,
                 );
             });
+    }
+
+    /**
+     * Hearth: every citation in the storage formatted together, in
+     * document order, as Hearth's References tab formats them.
+     * @returns {Map<string, string>} citationID to citeproc's HTML
+     */
+    #formatCitations() {
+        const out = this._formatter.rebuildProcessorState(
+            this._storage.getAllCitationsInJson(),
+            "html",
+        );
+        /** @type {Map<string, string>} */
+        const byID = new Map();
+        out.forEach(function (/** @type {[string, number, string]} */ row) {
+            byID.set(row[0], row[2]);
+        });
+        return byID;
     }
 
     /**
@@ -195,38 +201,25 @@ class CitationService {
         });
     }
 
+    /**
+     * The bibliography as formatted paragraphs: one per entry, italics and
+     * the rest as runs, hanging or numbered as citeproc's parameters say.
+     * Hearth: was HTML for PasteHtml (editors from 9.4) or text styled
+     * afterwards; line and entry spacing are left to the document, as in
+     * Hearth.
+     * @returns {{paragraphs: Array<Para>, plain: string} | null}
+     */
     #makeBibliography() {
         try {
-            const bibItems = new Array(this._storage.size);
-            /** @type {false | any} */
-            const bibObject = this._formatter.makeBibliography();
-
-            for (let i = 0; i < bibObject[1].length; i++) {
-                /** @type {string} */
-                let bibText = this.#unEscapeHtml(bibObject[1][i]);
-                bibText = bibText
-                    .replaceAll('\n', '')
-                    .replaceAll('\r', '')
-                    .replace(/\s+/g, ' ')
-                    .trim();
-
-                const paragraphStart = '<div class="csl-entry">';
-                const paragraphEnd = '</div>';
-                if (!bibObject[0]['second-field-align']) {
-                    bibText = bibText.replace(/<\/?div[^>]*>/g, '');
-                    bibText = "<p>" + bibText + "</p>";
-                } else if (bibText.indexOf(paragraphStart) === 0 && bibText.endsWith(paragraphEnd)) {
-                    bibText = paragraphStart + bibText.substring(paragraphStart.length, bibText.length - paragraphEnd.length).trim() + paragraphEnd;
-                }
-                if (window.Asc.scope.editorVersion < 9004000) {
-                    bibText += '\n';
-                }
-                bibItems.push(bibText);
-            }
-            const htmlBibliography = bibItems.join("").trim();
-
-            Asc.scope.bibStyle = bibObject[0];
-            return htmlBibliography;
+            /** @type {false | [BibliographyStyles, Array<string>]} */
+            const made = this._formatter.makeBibliography();
+            if (!made) throw "no bibliography";
+            const params = made[0];
+            return htmlParagraphs(made[1].join(""), {
+                hanging: !!params.hangingindent,
+                secondFieldAlign: !!params["second-field-align"],
+                maxOffset: params.maxoffset || 0,
+            });
         } catch (e) {
             if (
                 false ===
@@ -237,8 +230,16 @@ class CitationService {
                 console.error(e);
                 throw "Failed to apply this style.";
             }
-            return "";
+            return null;
         }
+    }
+
+    /**
+     * @param {string} text
+     * @returns {Array<Para>}
+     */
+    #textParagraphs(text) {
+        return [{ Runs: [{ Text: text }] }];
     }
 
     /** @param {AddinFieldData} field */
@@ -257,55 +258,46 @@ class CitationService {
     }
     /**
      * @param {Object & {citationID: string}} [updatedField]
-     * @returns {Promise<{fieldsWithCitations: {field: AddinFieldData, cslCitation: CSLCitation}[], bibFieldValue: string, bibField: AddinFieldData | undefined}>}
+     * @returns {Promise<{fieldsWithCitations: {field: ResultField, cslCitation: CSLCitation}[], bibField: ResultField | undefined}>}
      */
     #synchronizeStorageWithDocItems(updatedField) {
         const self = this;
         this._storage.clear();
+        this._storage.setInNotes(
+            this._cslStylesManager.getLastUsedFormat() === "note",
+        );
         CSLCitation.resetUsedIDs();
         return this.citationDocService
             .getAddinZoteroFields()
             .then(function (/** @type {AddinFieldData[]} */ arrFields) {
-                let numOfItems = 0;
-                let bibFieldValue = " ";
-
                 /** @type {AddinFieldData | undefined} */
                 const bibField = arrFields.find(function (field) {
-                    return (
-                        field.Value.indexOf(self._bibPrefixNew) !== -1 ||
-                        field.Value.indexOf(self._bibPrefix) !== -1
-                    );
+                    return fieldKind(field.Value) === "bibliography";
                 });
-                if (bibField) {
-                    let citationObject = self.#extractField(bibField);
-                    if (
-                        typeof citationObject === "object" &&
-                        Object.keys(citationObject).length > 0
-                    ) {
-                        bibFieldValue = JSON.stringify(citationObject);
-                    }
-                }
 
                 const fields = arrFields.filter(function (field) {
-                    return (
-                        field.Value.indexOf(self._citPrefixNew) !== -1 ||
-                        field.Value.indexOf(self._citPrefix) !== -1
-                    );
+                    return fieldKind(field.Value) === "citation";
                 });
                 let fieldsWithCitations = fields.map(function (field) {
-                    let citationObject = self.#extractField(field);
+                    let citationObject = self.#extractField(field) || {};
 
                     let citationID = ""; // old format
-                    if (field.Value.indexOf(self._citPrefix) === -1) {
+                    if (!/^\s*(ADDIN\s+)?ZOTERO_CITATION\b/.test(field.Value)) {
                         citationID = citationObject.citationID;
                     }
 
                     let cslCitation = new CSLCitation(citationID);
-                    if (updatedField) {
-                        numOfItems += cslCitation.fillFromObject(updatedField);
+                    // Hearth: the edited citation takes the edit window's
+                    // items, every other keeps its own (upstream filled
+                    // every citation with the edited one's items, which
+                    // numbered and sorted the rest wrongly).
+                    if (
+                        updatedField &&
+                        citationObject.citationID === updatedField.citationID
+                    ) {
+                        cslCitation.fillFromObject(updatedField);
                     } else {
-                        numOfItems +=
-                            cslCitation.fillFromObject(citationObject);
+                        cslCitation.fillFromObject(citationObject);
                     }
                     self._storage.addCslCitation(cslCitation);
 
@@ -327,7 +319,6 @@ class CitationService {
 
                 return {
                     bibField: bibField,
-                    bibFieldValue: bibFieldValue,
                     fieldsWithCitations: fieldsWithCitations,
                 };
             });
@@ -335,36 +326,38 @@ class CitationService {
 
     /**
      * @param {boolean} bNoHaveFields
-     * @param {string} bibFieldValue
-     * @returns
+     * @returns {Promise<string>}
      */
-    #addBibliography(bNoHaveFields, bibFieldValue) {
-        let bibliography = this.#makeBibliography();
-        if (bNoHaveFields) {
-            bibliography = translate(this._bibPlaceholderIfEmpty);
-        }
-        if (this._cslStylesManager.isLastUsedStyleContainBibliography()) {
-            return this.citationDocService.addBibliography(
-                bibliography,
-                bibFieldValue,
-            );
-        } else {
+    #addBibliography(bNoHaveFields) {
+        const bibliography = this.#makeBibliography();
+        if (!this._cslStylesManager.isLastUsedStyleContainBibliography()) {
             throw "The current bibliographic style does not describe the bibliography";
         }
+        const paragraphs = bNoHaveFields || !bibliography
+            ? this.#textParagraphs(translate(this._bibPlaceholderIfEmpty))
+            : bibliography.paragraphs;
+        return this.citationDocService.addBibliography(
+            paragraphs,
+            bibliographyValue(""),
+        );
     }
 
     /**
      * @param {boolean} bNoHaveFields
-     * @param {AddinFieldData} bibField
-     * @returns {AddinFieldData}
+     * @param {ResultField} bibField
+     * @returns {ResultField}
      */
     #updateBibliography(bNoHaveFields, bibField) {
-        if (bNoHaveFields) {
-            bibField["Content"] = translate(this._bibPlaceholderIfEmpty);
+        const bibliography = bNoHaveFields ? null : this.#makeBibliography();
+        if (bibliography) {
+            bibField.Content = bibliography.plain;
+            bibField.Paragraphs = bibliography.paragraphs;
         } else {
-            let bibliography = this.#makeBibliography();
-            bibField["Content"] = bibliography;
+            bibField.Content = translate(this._bibPlaceholderIfEmpty);
+            bibField.Paragraphs = this.#textParagraphs(bibField.Content);
         }
+        // Zotero's own Value; the JSON part already there is kept.
+        bibField.Value = bibliographyValue(bibField.Value);
 
         return bibField;
     }
@@ -376,47 +369,33 @@ class CitationService {
      * @returns {Promise<AddinFieldData[]>}
      */
     async #getUpdatedFields(fieldsWithCitations, bHardRefresh, bChangePosition) {
-        const fragment = document.createDocumentFragment();
-        const tempElement = document.createElement("div");
-        fragment.appendChild(tempElement);
-
-        /** @type {AddinFieldData[]} */
+        /** @type {ResultField[]} */
         const updatedFields = [];
+        const formatted = this.#formatCitations();
+        /** @param {string} s */
+        const same = function (s) {
+            return String(s || "").replace(/\u00A0/g, " ").trim();
+        };
 
         for (let i = fieldsWithCitations.length - 1; i >= 0; i--) {
             let bHasChanges = !!bChangePosition;
+            /** @type {{field: ResultField, cslCitation: CSLCitation}} */
             const { field, cslCitation } = fieldsWithCitations[i];
 
-            const citationsPre = this._storage.getCitationsPre(cslCitation.citationID);
-            const citationsPost = this._storage.getCitationsPost(cslCitation.citationID);;
-
-            const citations = this._storage.getAllCitationsInJson();
-            this._formatter.rebuildProcessorState(citations);
-            
-            const formattedCitationObj = this._formatter.processCitationCluster(
-                cslCitation.toJSON(),
-                citationsPre,
-                citationsPost
-            );
-
-            let htmlCitation = this.#unEscapeHtml(formattedCitationObj[1][0][1]);
-            tempElement.innerHTML = htmlCitation;
+            const htmlCitation = formatted.get(cslCitation.citationID) || "";
+            const runs = htmlParagraphs(htmlCitation);
             let oldContentInCit = cslCitation.getPlainCitation();
             const oldContentInDoc = field["Content"];
             if (oldContentInCit === "") {
                 oldContentInCit = oldContentInDoc; // for old versions of plugin, where "PlainCitation" was not saved
             }
-            const newContent = tempElement.innerText;
+            const newContent = runs.plain;
 
             if (cslCitation.getDoNotUpdate()) {
                 continue;
             }
 
-            /*if (oldContentInCit === oldContentInDoc && oldContentInCit === newContent && !bChangePosition) {
-                continue;
-            }*/
-
-            if (oldContentInCit !== oldContentInDoc && !bHardRefresh) {
+            if (same(oldContentInCit) !== same(oldContentInDoc) && !bHardRefresh) {
                 // content was changed by user, but not saved in citation object
                 let text =
                     "<p>" +
@@ -448,8 +427,11 @@ class CitationService {
                     cslCitation.setDoNotUpdate();
                     // @ts-ignore
                     delete field["Content"];
+                    delete field.Paragraphs;
                 } else {
-                    field["Content"] = htmlCitation;
+                    field["Content"] = newContent;
+                    field.Paragraphs = runs.paragraphs;
+                    cslCitation.setFormattedCitation(htmlCitation);
                     cslCitation.setPlainCitation(newContent);
                 }
                 bHasChanges = true;
@@ -457,17 +439,17 @@ class CitationService {
                 if (newContent !== oldContentInDoc || oldContentInCit !== oldContentInDoc || oldContentInCit !== newContent) {
                     bHasChanges = true;
                 }
-                field["Content"] = htmlCitation;
+                field["Content"] = newContent;
+                field.Paragraphs = runs.paragraphs;
+                cslCitation.setFormattedCitation(htmlCitation);
                 cslCitation.setPlainCitation(newContent);
             }
 
-            if (cslCitation) {
-                const newValue = this._citPrefixNew + " " + this._citSuffixNew + JSON.stringify(cslCitation.toJSON());
-                if (field["Value"] !== newValue) {
-                    bHasChanges = true;
-                }
-                field["Value"] = newValue;
+            const newValue = citationValue(cslCitation.toJSON());
+            if (field["Value"] !== newValue) {
+                bHasChanges = true;
             }
+            field["Value"] = newValue;
 
             if (bHasChanges) {
                 updatedFields.push(field);
@@ -490,10 +472,11 @@ class CitationService {
             {
                 /** @param {string} id */
                 retrieveLocale: function (id) {
-                    if (self._localesManager.getLocale(id)) {
-                        return self._localesManager.getLocale(id);
-                    }
-                    return self._localesManager.getLocale();
+                    // As Hearth: a locale that is not bundled is en-US.
+                    return (
+                        self._localesManager.getLocale(id) ||
+                        self._localesManager.getLocale("en-US")
+                    );
                 },
                 /** @param {string} id */
                 retrieveItem: function (id) {
@@ -507,25 +490,15 @@ class CitationService {
                 this._cslStylesManager.getLastUsedStyleIdOrDefault(),
             ),
             this._localesManager.getLastUsedLanguage(),
-            true,
+            // Hearth: a style's own default-locale wins, as in Hearth
+            // (upstream forced the chosen language over it).
+            false,
         );
         if (arrIds.length) {
             this._formatter.updateItems(arrIds);
         }
 
         return;
-    }
-
-    /**
-     * @param {string} htmlString
-     * @returns {string}
-     */
-    #unEscapeHtml(htmlString) {
-        return htmlString
-            .replace(/\u00A0/g, " ")
-            .replace(/&#60;/g, "<")
-            .replace(/&#62;/g, ">")
-            .replace(/&#38;/g, "&");
     }
 
     /** @returns {Promise<AddinFieldData | null>} */
@@ -541,7 +514,7 @@ class CitationService {
         if (isOk) {
             this.#additionalWindow.showInfoWindow(
                 "Success!",
-                "All active Mendeley citations and Bibliography have been replaced.",
+                "All Zotero citations and the bibliography are now plain text.",
                 "success",
             );
         }
@@ -576,13 +549,47 @@ class CitationService {
             });
             this._storage.addCslCitation(cslCitation);
             return self.#formatInsertLink(cslCitation);
+        }).then(async (hasNotes) => {
+            // The first citation stores the document's style, as Zotero.
+            await this.saveDocumentStyle(true);
+            return hasNotes;
         });
+    }
+
+    /**
+     * Hearth: the document's style as its Zotero preferences
+     * (ZOTERO_PREF_n) name it, or null.
+     * @returns {Promise<{styleID: string, session: string} | null>}
+     */
+    async readDocumentStyle() {
+        return readPrefs(await this.citationDocService.readPrefs());
+    }
+
+    /**
+     * Hearth: stores the chosen style in the document's Zotero preferences,
+     * as Zotero does when the style is chosen or the first citation is
+     * put in. The document's session id is kept.
+     * @param {boolean} [onlyIfNone] - leave preferences already there
+     * @returns {Promise<void>}
+     */
+    async saveDocumentStyle(onlyIfNone) {
+        const text = await this.citationDocService.readPrefs();
+        const old = readPrefs(text);
+        if (old && onlyIfNone) return;
+        const styleName = this._cslStylesManager.getLastUsedStyleIdOrDefault();
+        const xml = prefsXML(
+            await this._cslStylesManager.getStyleFullId(styleName),
+            this._cslStylesManager.isLastUsedStyleContainBibliography(),
+            (old && old.session) || randomID(),
+        );
+        if (xml === text) return;
+        await this.citationDocService.writePrefs(prefsChunks(xml));
     }
 
     /** @returns {Promise<string>} */
     async insertBibliography() {
         try {
-            const { fieldsWithCitations, bibFieldValue, bibField } =
+            const { fieldsWithCitations, bibField } =
                 await this.#synchronizeStorageWithDocItems();
             const bNoHaveFields = fieldsWithCitations.length === 0;
 
@@ -595,7 +602,7 @@ class CitationService {
                 return this.citationDocService.updateAddinFields(updatedFields)
                     .then((fieldIds) => fieldIds ? fieldIds[0] : "");
             } else {
-                return this.#addBibliography(bNoHaveFields, bibFieldValue);
+                return this.#addBibliography(bNoHaveFields);
             }
         } catch (e) {
             throw e;

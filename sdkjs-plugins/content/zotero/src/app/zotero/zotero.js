@@ -379,11 +379,11 @@ ZoteroSdk.prototype.getUserGroups = function () {
 };
 
 /**
- * Set API key and validate it
+ * The user a key belongs to, from the web API (keys/<key>).
  * @param {string} key
+ * @returns {Promise<number>}
  */
-ZoteroSdk.prototype.setApiKey = function (key) {
-    var self = this;
+ZoteroSdk.prototype._keyUser = function (key) {
     var path = this.API_PATHS.KEYS + "/" + key;
 
     return this._buildGetRequest(path)
@@ -397,9 +397,45 @@ ZoteroSdk.prototype.setApiKey = function (key) {
             return fetchResponse.json();
         })
         .then(function (/** @type {any} */ keyData) {
-            self._saveSettings(keyData.userID, key);
-            return true;
+            return Number(keyData.userID);
         });
+};
+
+/**
+ * Set API key and validate it
+ * @param {string} key
+ */
+ZoteroSdk.prototype.setApiKey = function (key) {
+    var self = this;
+    return this._keyUser(key).then(function (userID) {
+        self._saveSettings(userID, key);
+        return true;
+    });
+};
+
+/**
+ * Hearth: uses the key Hearth handed over, for this session only. It is
+ * never written to the browser's storage (Hearth's Office settings are
+ * the one place it is kept).
+ * @param {string} key
+ * @returns {Promise<boolean>}
+ */
+ZoteroSdk.prototype.useKeyInMemory = function (key) {
+    var self = this;
+    this._isOnlineAvailable = true;
+    return this._keyUser(key).then(function (userID) {
+        self._applySettings(userID, key);
+        return true;
+    });
+};
+
+/**
+ * Hearth: removes a key an earlier version of the plugin kept in the
+ * browser's storage.
+ */
+ZoteroSdk.prototype.forgetStoredKey = function () {
+    localStorage.removeItem(this.STORAGE_KEYS.USER_ID);
+    localStorage.removeItem(this.STORAGE_KEYS.API_KEY);
 };
 
 /**

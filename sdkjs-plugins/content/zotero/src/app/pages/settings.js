@@ -113,62 +113,19 @@ function SettingsPage(router, displayNoneClass) {
     this._onChangeState = function (newSettings, oldSettings) {};
     this._styleMessage = new Message("styleMessage", { type: "error" });
     this._langMessage = new Message("langMessage", { type: "error" });
+    // Hearth: the languages of the bundled locales only (upstream offered
+    // 53, fetched from GitHub).
     /** @type {Array<[string, string]>} */
     this._LANGUAGES = [
-        ["af-ZA", "Afrikaans"],
-        ["ar", "Arabic"],
-        ["bg-BG", "Bulgarian"],
-        ["ca-AD", "Catalan"],
-        ["cs-CZ", "Czech"],
-        ["cy-GB", "Welsh"],
-        ["da-DK", "Danish"],
-        ["de-AT", "German (Austria)"],
-        ["de-CH", "German (Switzerland)"],
         ["de-DE", "German (Germany)"],
-        ["el-GR", "Greek"],
         ["en-GB", "English (UK)"],
         ["en-US", "English (US)"],
-        ["es-CL", "Spanish (Chile)"],
         ["es-ES", "Spanish (Spain)"],
-        ["es-MX", "Spanish (Mexico)"],
-        ["et-EE", "Estonian"],
-        ["eu", "Basque"],
-        ["fa-IR", "Persian"],
-        ["fi-FI", "Finnish"],
-        ["fr-CA", "French (Canada)"],
         ["fr-FR", "French (France)"],
-        ["he-IL", "Hebrew"],
-        ["hr-HR", "Croatian"],
-        ["hu-HU", "Hungarian"],
-        ["id-ID", "Indonesian"],
-        ["is-IS", "Icelandic"],
-        ["it-IT", "Italian"],
-        ["ja-JP", "Japanese"],
-        ["km-KH", "Khmer"],
-        ["ko-KR", "Korean"],
-        ["la", "Latin"],
-        ["lt-LT", "Lithuanian"],
-        ["lv-LV", "Latvian"],
-        ["mn-MN", "Mongolian"],
-        ["nb-NO", "Norwegian (Bokmål)"],
-        ["nl-NL", "Dutch"],
-        ["nn-NO", "Norwegian (Nynorsk)"],
-        ["pl-PL", "Polish"],
-        ["pt-BR", "Portuguese (Brazil)"],
         ["pt-PT", "Portuguese (Portugal)"],
-        ["ro-RO", "Romanian"],
-        ["ru-RU", "Russian"],
-        ["sk-SK", "Slovak"],
-        ["sl-SI", "Slovenian"],
-        ["sr-RS", "Serbian"],
-        ["sv-SE", "Swedish"],
-        ["th-TH", "Thai"],
-        ["tr-TR", "Turkish"],
-        ["uk-UA", "Ukrainian"],
-        ["vi-VN", "Vietnamese"],
-        ["zh-CN", "Chinese (PRC)"],
-        ["zh-TW", "Chinese (Taiwan)"],
     ];
+    /** Hearth: whether a custom CSL file may be added (not in Hearth). */
+    this._customStylesAllowed = true;
 
     this._bNumFormat = false;
 
@@ -209,22 +166,49 @@ SettingsPage.prototype.getLastUsedStyleId = function () {
 };
 
 /**
+ * @param {string|null} [documentStyle] - Hearth: the style the document's
+ *   preferences name (a bundled style's short name), which wins over the
+ *   one last used in this browser
  * @returns
  */
-SettingsPage.prototype.init = function () {
+SettingsPage.prototype.init = function (documentStyle) {
     const self = this;
-    var lastStyle = this._cslStylesManager.getLastUsedStyleId() || "ieee";
+    var lastStyle =
+        documentStyle || this._cslStylesManager.getLastUsedStyleIdOrDefault();
     const savedLang = this._localesManager.getLastUsedLanguage();
     this._addEventListeners();
     this._languageSelect.addItems(this._LANGUAGES, savedLang);
 
     const promises = [
-        this._onStyleChange(lastStyle),
-        this._localesManager.loadLocale(savedLang),
-        this._loadStyles(),
+        this._onStyleChange(lastStyle)
+            .catch(function () {
+                // A style that is not bundled (any more): the default.
+                return self._onStyleChange(
+                    self._cslStylesManager.getDefaultStyle()
+                );
+            })
+            .then(function () {
+                // After the style is set, so the list shows it chosen.
+                return self._loadStyles();
+            }),
+        this._localesManager
+            .loadAll()
+            .then(function () {
+                return self._localesManager.loadLocale(savedLang);
+            }),
     ];
 
     return Promise.all(promises);
+};
+
+/**
+ * Hearth: custom CSL files are offered only where Hearth does not host
+ * the plugin (Hearth formats with its bundled styles only, and the other
+ * tab could not format a document in a style only this browser has).
+ * @param {boolean} allowed
+ */
+SettingsPage.prototype.setCustomStylesAllowed = function (allowed) {
+    this._customStylesAllowed = allowed;
 };
 
 /**
@@ -232,22 +216,6 @@ SettingsPage.prototype.init = function () {
  */
 SettingsPage.prototype.onChangeState = function (callbackFn) {
     this._onChangeState = callbackFn;
-};
-
-/**
- * @param {boolean} isAvailable
- */
-SettingsPage.prototype.setDesktopApiAvailable = function (isAvailable) {
-    this._localesManager.setDesktopApiAvailable(isAvailable);
-    this._cslStylesManager.setDesktopApiAvailable(isAvailable);
-};
-
-/**
- * @param {boolean} isAvailable
- */
-SettingsPage.prototype.setRestApiAvailable = function (isAvailable) {
-    this._localesManager.setRestApiAvailable(isAvailable);
-    this._cslStylesManager.setRestApiAvailable(isAvailable);
 };
 
 SettingsPage.prototype._addEventListeners = function () {
@@ -311,7 +279,9 @@ SettingsPage.prototype._addEventListeners = function () {
 
                     const newState = {
                         language: selectedLang,
-                        style: selectedStyleId || "ieee",
+                        style:
+                            selectedStyleId ||
+                            self._cslStylesManager.getDefaultStyle(),
                         notesStyle: noteValue,
                         styleFormat: self._cslStylesManager.getLastUsedFormat(),
                     };
@@ -395,14 +365,9 @@ SettingsPage.prototype._addEventListeners = function () {
             );
             self._somethingWasChanged();
             self._onStyleChange(event.detail.current.toString(), true);
-            return;
-        } else if (event.type !== "selectbox:custom") {
-            return;
         }
-        const actionId = event.detail.current;
-        if (actionId === "more_styles") {
-            self._styleSelectListOther.openDropdown();
-        }
+        // "Add custom style..." is a label for the file input, which
+        // handles it.
     });
     self._styleSelectListOther.subscribe(function (event) {
         if (event.type !== "selectbox:change") {
@@ -461,14 +426,14 @@ SettingsPage.prototype._loadStyles = function () {
         .then(
             /** @param {Array<StyleInfo>} stylesInfo*/ function (stylesInfo) {
                 self._addStylesToList(stylesInfo);
-                self._styleSelect.addCustomItem(
-                    "more_styles",
-                    "More Styles..."
-                );
-                self._styleSelect.addCustomItem(
-                    "cslFileInput",
-                    "Add custom style..."
-                );
+                // Hearth: every bundled style is in the list, so there is
+                // no "More Styles..." (upstream's list of the repository).
+                if (self._customStylesAllowed) {
+                    self._styleSelect.addCustomItem(
+                        "cslFileInput",
+                        "Add custom style..."
+                    );
+                }
             }
         )
         .catch(function (err) {
@@ -480,20 +445,14 @@ SettingsPage.prototype._loadStyles = function () {
  * @param {Array<StyleInfo>} stylesInfo
  */
 SettingsPage.prototype._addStylesToList = function (stylesInfo) {
-    const self = this;
     var lastStyle = this._cslStylesManager.getLastUsedStyleIdOrDefault();
 
     /** @type {[string, string][]} */
     const allStyles = stylesInfo.map(function (style) {
         return [style.name, style.title];
     });
-    const mainStyles = allStyles.filter(function (style) {
-        if (style[0] == lastStyle) return true;
-        if (self._cslStylesManager.isStyleDefault(style[0])) return true;
-        return false;
-    });
 
-    this._styleSelect.addItems(mainStyles, lastStyle);
+    this._styleSelect.addItems(allStyles, lastStyle);
     this._styleSelectListOther.addItems(allStyles, lastStyle);
 };
 

@@ -93,11 +93,18 @@
 		return typeof text === 'string' ? text : '';
 	}
 
-	// writePrefs stores the preferences, chunk by chunk.
+	// writePrefs stores the preferences, chunk by chunk; pieces left over
+	// from a longer earlier text are emptied (the API cannot delete a
+	// property, and readPrefs stops at the first empty one).
 	function writePrefs(chunks) {
 		return command(function () {
 			const props = Api.GetDocument().GetCustomProperties();
 			Asc.scope.chunks.forEach(function (c, n) { props.Add('ZOTERO_PREF_' + (n + 1), c); });
+			for (let n = Asc.scope.chunks.length + 1; n < 100; n++) {
+				const old = props.Get('ZOTERO_PREF_' + n);
+				if (old === undefined || old === null || old === '') break;
+				props.Add('ZOTERO_PREF_' + n, '');
+			}
 		}, { chunks: chunks });
 	}
 

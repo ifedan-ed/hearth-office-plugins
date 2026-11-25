@@ -42,12 +42,26 @@ class CSLCitationStorage {
     #itemIds;
     /** @type {Array<CSLCitation>} */
     #citations;
+    /** Hearth: whether the style puts citations in notes. */
+    #inNotes;
 
     constructor() {
         this.#items = [];
         this.#itemIds = [];
         this.#citations = [];
+        this.#inNotes = false;
         this.size = 0;
+    }
+
+    /**
+     * Hearth: whether citations are in notes. Zotero numbers a citation's
+     * note (noteIndex) only for note styles and writes 0 for in-text ones.
+     * @param {boolean} inNotes
+     * @returns {CSLCitationStorage}
+     */
+    setInNotes(inNotes) {
+        this.#inNotes = inNotes;
+        return this;
     }
 
     /** @returns {CitationItem} */
@@ -130,7 +144,7 @@ class CSLCitationStorage {
      */
     addCslCitation(cslCitation) {
         this.#citations.push(cslCitation);
-        cslCitation.setNoteIndex(this.#citations.length);
+        cslCitation.setNoteIndex(this.#inNotes ? this.#citations.length : 0);
 
         cslCitation.getCitationItems().forEach((item) => {
             this.#setItem(item.id, item);
@@ -155,37 +169,6 @@ class CSLCitationStorage {
      */
     getCitationIndex(id) {
         return this.#citations.findIndex(citation => citation.citationID === id)
-    }
-    /**
-     * @param {string} id
-     * @returns {Array<[string, number]>}
-     */
-    getCitationsPre(id) {
-        /** @type {Array<[string, number]>} */
-        const citationsPre = [];
-        this.#citations.find((citation, index) => {
-            if (citation.citationID === id) {
-                return true;
-            }
-            citationsPre.push([citation.citationID, index + 1]);
-            return false;
-        });
-        return citationsPre;
-    }
-    /**
-     * @param {string} id
-     * @returns {Array<[string, number]>}
-     */
-    getCitationsPost(id) {
-        /** @type {Array<[string, number]>} */
-        const citationsPost = [];
-        const citationIndex = this.getCitationIndex(id);
-        for (let i = citationIndex + 1; i < this.#citations.length; i++) {
-            const citation = this.#citations[i];
-            citationsPost.push([citation.citationID, i + 1]);
-        }
-
-        return citationsPost;
     }
 
 }

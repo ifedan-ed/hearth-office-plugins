@@ -78,17 +78,32 @@ Two installation ways are available:
 
 6. Copy the newly created key and paste to `API Key` field in the plugin’s interface and save it.
 
-## Offline mode
+## In Hearth Office
 
-1. [Download](https://www.zotero.org/download/) and install Zotero Connector.
-2. Launch the desktop application.
-3. Make sure the application API is open for interaction. (`Edit` -> `Settings` -> `Advanced` -> `Allow other applications on this computer to communicate with Zotero`)
+Hearth Office carries this plugin with these changes:
 
-### Update locale files downloaded offline
+- Citations and the bibliography are written in Zotero's own Word format,
+  the same as Zotero's Word plugin and Hearth's References tab:
+  `ZOTERO_ITEM CSL_CITATION {json}` per citation (item URIs in Zotero's
+  form, http://zotero.org/users/ID/items/KEY), `ZOTERO_BIBL {json}
+  CSL_BIBLIOGRAPHY` for the bibliography, and the style in the document
+  properties `ZOTERO_PREF_n`, read back to pick the document's style
+  (src/app/hearth/zotero-format.js).
+- Field results are written as formatted paragraphs through
+  AddinFieldData.Paragraphs, a Hearth Office extension of the plugin API
+  (src/app/hearth/runs.js): superscript, italics and hanging indents
+  survive every refresh.
+- The only site it talks to is api.zotero.org. Styles and locales come
+  from resources/csl (the set Hearth bundles; resources/csl/NOTICE.md),
+  formatted with citeproc-js 2.4.63, the version Hearth uses. Zotero
+  desktop's local API is not used.
+- Hearth passes the person's Zotero API key in the plugin options
+  (`{"hearth": true, "apiKey": "..."}`); it is kept in memory only. With
+  `{"hearth": true}` and no key the panel says to set it in Hearth's
+  Settings, Office; with `{"off": true}` (a link's visitor) there is no
+  Zotero. Other hosts keep the plugin's own sign-in.
 
-```bash
-    cd .dev/offline-files-update && npm run start && cd ../..
-```
+Tests (not shipped: dot-folders stay out of the image): `node --test .tests/zotero.test.mjs`.
 
 ## For developers
 

@@ -118,18 +118,6 @@ var AscSimpleRequest = window.AscSimpleRequest;
  * @property {"margin"|'flush'|false} `second-field-align`
  */
 
-/**
- * @typedef {'i'|'u'|'b'|'sc'|'sup'|'sub'|string} AllowedTags
- */
-
-/**
- * @typedef {Object} FormattingPositions
- * @property {AllowedTags} type
- * @property {number} start
- * @property {number} end
- * @property {string} [text]
- */
-
 /** ------------------------------------------------ */
 
 /**

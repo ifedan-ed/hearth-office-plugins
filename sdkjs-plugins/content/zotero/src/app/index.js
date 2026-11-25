@@ -44,6 +44,7 @@ import { LoginPage } from "./pages/login";
 import { translate, CitationService, CursorService } from "./services";
 import { SearchFilterComponents, SelectCitationsComponent } from "./shared/ui";
 import { Button, Loader } from "./shared/components";
+import { hostMode } from "./hearth/host";
 
 import "../components.css";
 import "../styles.css";
@@ -143,37 +144,68 @@ import "../styles.css";
 
         addEventListeners();
 
-        loginPage
-            .init()
-            .onOpen(function () {
-                Loader.hide();
-            })
-            .onChangeState(function (apis) {
-                settings.setDesktopApiAvailable(apis.desktop);
-                settings.setRestApiAvailable(apis.online);
-            })
-            .onAuthorized(function (apis) {
-                if (isInit) return;
-                isInit = true;
-                Loader.show();
+        /** Signed in: the library, the settings and the document's style. */
+        function onAuthorized() {
+            if (isInit) return;
+            isInit = true;
+            Loader.show();
 
-                let loadGroupsPromise = loadGroups().catch((e) => {
-                    console.error(e);
-                    showError(translate("An error occurred while loading library groups. Try restarting the plugin."));
-                });
-                let initSettingsPromise = settings.init().catch((e) => {
+            let loadGroupsPromise = loadGroups().catch((e) => {
+                console.error(e);
+                showError(translate("An error occurred while loading library groups. Try restarting the plugin."));
+            });
+            let initSettingsPromise = documentStyle()
+                .then(function (styleName) {
+                    return settings.init(styleName);
+                })
+                .catch((e) => {
                     console.error(e);
                     showError(translate("An error occurred while loading settings. Try restarting the plugin."));
                     settings.show();
                 });
 
-                Promise.all([loadGroupsPromise, initSettingsPromise]).then(function () {
-                    Loader.hide();
-                    return showCitationsAtTheStartFromMyLibrary();
-                }).finally(function () {
-                    Loader.hide();
-                });
+            Promise.all([loadGroupsPromise, initSettingsPromise]).then(function () {
+                Loader.hide();
+                return showCitationsAtTheStartFromMyLibrary();
+            }).finally(function () {
+                Loader.hide();
             });
+        }
+
+        // Hearth: the key comes from Hearth's Office settings, through the
+        // plugin options; a link's visitor gets no Zotero at all. Only
+        // another host keeps the plugin's own sign-in.
+        const host = hostMode(window.Asc.plugin.info.options);
+        if (host.mode !== "plugin") {
+            sdk.forgetStoredKey();
+            settings.setCustomStylesAllowed(false);
+            // The key is Hearth's to change, not the plugin's.
+            const logout = document.getElementById("logoutLink");
+            if (logout) logout.classList.add(displayNoneClass);
+        }
+        if (host.mode === "off") {
+            showHostLine(translate("Zotero is not available here."));
+        } else if (host.mode === "hearth-no-key") {
+            showHostLine(translate("Set your Zotero API key in Hearth: Settings, Office."));
+        } else if (host.mode === "hearth-key") {
+            sdk.useKeyInMemory(host.apiKey)
+                .then(function () {
+                    Loader.hide();
+                    router.openMain();
+                    onAuthorized();
+                })
+                .catch(function (e) {
+                    console.error(e);
+                    showHostLine(translate("Zotero did not accept the API key set in Hearth: Settings, Office."));
+                });
+        } else {
+            loginPage
+                .init()
+                .onOpen(function () {
+                    Loader.hide();
+                })
+                .onAuthorized(onAuthorized);
+        }
 
         window.Asc.plugin.onTranslate = applyTranslations;
         
@@ -185,6 +217,40 @@ import "../styles.css";
         });
         
     };
+
+    /**
+     * Hearth: one line in place of the whole panel (no Zotero here, or no
+     * key yet).
+     * @param {string} text
+     */
+    function showHostLine(text) {
+        Loader.hide();
+        const line = document.getElementById("hostLine");
+        const content = document.getElementById("content");
+        if (content) content.classList.add(displayNoneClass);
+        if (line) {
+            line.textContent = text;
+            line.classList.remove(displayNoneClass);
+        }
+    }
+
+    /**
+     * Hearth: the bundled style the document's Zotero preferences name, or
+     * null (none, or not bundled: the one last used then).
+     * @returns {Promise<string|null>}
+     */
+    function documentStyle() {
+        return citationService
+            .readDocumentStyle()
+            .then(function (prefs) {
+                if (!prefs) return null;
+                return settings.getStyleManager().resolveDocumentStyle(prefs.styleID);
+            })
+            .catch(function (e) {
+                console.error(e);
+                return null;
+            });
+    }
 
     function showCitationsAtTheStartFromMyLibrary() {
         libLoader.show();
@@ -500,6 +566,13 @@ import "../styles.css";
             }
 
             updateFn()
+                .then(function () {
+                    // Hearth: the chosen style goes into the document, as
+                    // Zotero keeps it.
+                    if (newState.style !== oldState.style) {
+                        return citationService.saveDocumentStyle();
+                    }
+                })
                 .catch(function (error) {
                     console.error(error);
                     let message = translate("Failed to refresh");

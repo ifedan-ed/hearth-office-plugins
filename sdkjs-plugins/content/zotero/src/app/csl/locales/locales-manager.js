@@ -32,13 +32,15 @@
 
 // @ts-check
 
-function LocalesManager() {
-    this._isOnlineAvailable = false;
-    this._isDesktopAvailable = false;
+// Hearth: locales come only from the plugin's own folder, the six Hearth
+// bundles (resources/csl/locales). Upstream fetched them from
+// raw.githubusercontent.com and fell back to its own copies.
 
-    this._LOCALES_URL =
-        "https://raw.githubusercontent.com/citation-style-language/locales/master/";
+function LocalesManager() {
     this._LOCALES_PATH = "./resources/csl/locales/";
+
+    /** The bundled locales: the languages offered. */
+    this.LOCALES = ["en-US", "en-GB", "fr-FR", "de-DE", "es-ES", "pt-PT"];
 
     this._lastLanguageKey = "zoteroLang";
 
@@ -55,19 +57,36 @@ function LocalesManager() {
  * @returns {Promise<string>}
  */
 LocalesManager.prototype.loadLocale = function (langTag) {
-    const self = this;
     this._selectedLanguage = langTag;
+    return this._load(langTag);
+};
+
+/**
+ * Hearth: loads every bundled locale (six small files), so a style's own
+ * default-locale is at hand when citeproc asks for it, as in Hearth.
+ * @returns {Promise<void>}
+ */
+LocalesManager.prototype.loadAll = function () {
+    const self = this;
+    return Promise.all(
+        this.LOCALES.map(function (tag) {
+            return self._load(tag);
+        })
+    ).then(function () {});
+};
+
+/**
+ * @param {string} langTag
+ * @returns {Promise<string>}
+ */
+LocalesManager.prototype._load = function (langTag) {
+    const self = this;
     if (this._cache[langTag]) {
         return Promise.resolve(this._cache[langTag]);
     }
-    var url = this._getLocalesUrl() + "locales-" + langTag + ".xml";
-    return fetch(url)
-        .catch(function (err) {
-            console.error("Failed to load locale:", err);
-            // Try to load from local path as fallback
-            return fetch(self._LOCALES_PATH + "locales-" + langTag + ".xml");
-        })
+    return fetch(this._LOCALES_PATH + "locales-" + langTag + ".xml")
         .then(function (response) {
+            if (!response.ok) throw "Failed to load language";
             return response.text();
         })
         .then(function (text) {
@@ -80,9 +99,10 @@ LocalesManager.prototype.loadLocale = function (langTag) {
  * @returns {string}
  */
 LocalesManager.prototype.getLastUsedLanguage = function () {
+    const saved = localStorage.getItem(this._lastLanguageKey);
     this._selectedLanguage =
         this._selectedLanguage ||
-        localStorage.getItem(this._lastLanguageKey) ||
+        (saved && this.LOCALES.indexOf(saved) !== -1 ? saved : null) ||
         "en-US";
     return this._selectedLanguage;
 };
@@ -110,26 +130,6 @@ LocalesManager.prototype.getLocale = function (localeId) {
 LocalesManager.prototype.saveLastUsedLanguage = function (language) {
     this._selectedLanguage = language;
     localStorage.setItem(this._lastLanguageKey, language);
-};
-
-/**
- * Get locales URL based on online/offline mode
- */
-LocalesManager.prototype._getLocalesUrl = function () {
-    return this._isOnlineAvailable ? this._LOCALES_URL : this._LOCALES_PATH;
-};
-
-/**
- * @param {boolean} isApiAvailable
- */
-LocalesManager.prototype.setDesktopApiAvailable = function (isApiAvailable) {
-    this._isDesktopAvailable = isApiAvailable;
-};
-/**
- * @param {boolean} isApiAvailable
- */
-LocalesManager.prototype.setRestApiAvailable = function (isApiAvailable) {
-    this._isOnlineAvailable = isApiAvailable;
 };
 
 export { LocalesManager };

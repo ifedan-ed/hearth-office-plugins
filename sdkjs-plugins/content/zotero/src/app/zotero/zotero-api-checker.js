@@ -50,21 +50,10 @@ var ZoteroApiChecker = {
     _timeout: 1000, // 1 second
     /** @type {function(AvailableApis): void} */
     _callback: function (e) {},
-    _desktopVersion: (function () {
-        if (
-            window.navigator &&
-            window.navigator.userAgent
-                .toLowerCase()
-                .indexOf("ascdesktopeditor") < 0
-        )
-            return false;
-        if (window.location && window.location.protocol == "file:") return true;
-        const src = window.document.currentScript
-            ? window.document.currentScript.getAttribute("src")
-            : "";
-        if (src && 0 == src.indexOf("file:///")) return true;
-        return false;
-    })(),
+    // Hearth: Zotero desktop's local API (127.0.0.1:23119) is not used;
+    // the plugin talks to api.zotero.org only, with the person's key.
+    // Upstream tried it in the desktop editors.
+    _desktopVersion: false,
 
     /**
      * @param {ZoteroSdk} sdk

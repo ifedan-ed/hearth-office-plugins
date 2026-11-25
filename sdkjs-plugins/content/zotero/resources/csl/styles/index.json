@@ -1,0 +1,224 @@
+[
+ {
+  "id": "http://www.zotero.org/styles/nlm-citation-sequence",
+  "file": "nlm-citation-sequence.csl",
+  "title": "NLM/Vancouver: Citing Medicine 2nd edition (citation-sequence)",
+  "kind": "numeric"
+ },
+ {
+  "id": "http://www.zotero.org/styles/nlm-citation-sequence-superscript",
+  "file": "nlm-citation-sequence-superscript.csl",
+  "title": "NLM/Vancouver: Citing Medicine 2nd edition (citation-sequence, superscript)",
+  "kind": "numeric"
+ },
+ {
+  "id": "http://www.zotero.org/styles/nlm-citation-sequence-brackets",
+  "file": "nlm-citation-sequence-brackets.csl",
+  "title": "NLM/Vancouver: Citing Medicine 2nd edition (citation-sequence, brackets)",
+  "kind": "numeric"
+ },
+ {
+  "id": "http://www.zotero.org/styles/nlm-name-year",
+  "file": "nlm-name-year.csl",
+  "title": "NLM/Vancouver: Citing Medicine 2nd edition (name-year)",
+  "kind": "author-date"
+ },
+ {
+  "id": "http://www.zotero.org/styles/american-medical-association",
+  "file": "american-medical-association.csl",
+  "title": "AMA Manual of Style 11th edition",
+  "kind": "numeric"
+ },
+ {
+  "id": "http://www.zotero.org/styles/apa",
+  "file": "apa.csl",
+  "title": "APA Style 7th edition",
+  "kind": "author-date"
+ },
+ {
+  "id": "http://www.zotero.org/styles/harvard-cite-them-right",
+  "file": "harvard-cite-them-right.csl",
+  "title": "Cite Them Right 12th edition (author-date/Harvard)",
+  "kind": "author-date"
+ },
+ {
+  "id": "http://www.zotero.org/styles/chicago-author-date",
+  "file": "chicago-author-date.csl",
+  "title": "Chicago Manual of Style 18th edition (author-date)",
+  "kind": "author-date"
+ },
+ {
+  "id": "http://www.zotero.org/styles/ieee",
+  "file": "ieee.csl",
+  "title": "IEEE Reference Guide version 11.29.2023",
+  "kind": "numeric"
+ },
+ {
+  "id": "http://www.zotero.org/styles/nature",
+  "file": "nature.csl",
+  "title": "Nature",
+  "kind": "numeric"
+ },
+ {
+  "id": "http://www.zotero.org/styles/science",
+  "file": "science.csl",
+  "title": "Science",
+  "kind": "numeric"
+ },
+ {
+  "id": "http://www.zotero.org/styles/the-lancet",
+  "file": "the-lancet.csl",
+  "title": "The Lancet",
+  "kind": "numeric"
+ },
+ {
+  "id": "http://www.zotero.org/styles/the-new-england-journal-of-medicine",
+  "file": "the-new-england-journal-of-medicine.csl",
+  "title": "The New England Journal of Medicine",
+  "kind": "numeric"
+ },
+ {
+  "id": "http://www.zotero.org/styles/bmj",
+  "file": "bmj.csl",
+  "title": "BMJ",
+  "kind": "numeric"
+ },
+ {
+  "id": "http://www.zotero.org/styles/plos",
+  "file": "plos.csl",
+  "title": "Public Library of Science",
+  "kind": "numeric"
+ },
+ {
+  "id": "http://www.zotero.org/styles/american-heart-association",
+  "file": "american-heart-association.csl",
+  "title": "American Heart Association",
+  "kind": "numeric"
+ },
+ {
+  "id": "http://www.zotero.org/styles/journal-of-the-american-college-of-cardiology",
+  "file": "journal-of-the-american-college-of-cardiology.csl",
+  "title": "Journal of the American College of Cardiology",
+  "kind": "numeric"
+ },
+ {
+  "id": "http://www.zotero.org/styles/european-society-of-cardiology",
+  "file": "european-society-of-cardiology.csl",
+  "title": "European Society of Cardiology",
+  "kind": "numeric"
+ },
+ {
+  "id": "http://www.zotero.org/styles/biomed-central",
+  "file": "biomed-central.csl",
+  "title": "BioMed Central",
+  "kind": "numeric"
+ },
+ {
+  "id": "http://www.zotero.org/styles/frontiers",
+  "file": "frontiers.csl",
+  "title": "Frontiers journals",
+  "kind": "author-date"
+ },
+ {
+  "id": "http://www.zotero.org/styles/multidisciplinary-digital-publishing-institute",
+  "file": "multidisciplinary-digital-publishing-institute.csl",
+  "title": "Multidisciplinary Digital Publishing Institute",
+  "kind": "numeric"
+ },
+ {
+  "id": "http://www.zotero.org/styles/springer-basic-author-date",
+  "file": "springer-basic-author-date.csl",
+  "title": "Springer - Basic (author-date)",
+  "kind": "author-date"
+ },
+ {
+  "id": "http://www.zotero.org/styles/springer-vancouver",
+  "file": "springer-vancouver.csl",
+  "title": "Springer - NLM/Vancouver (citation-sequence)",
+  "kind": "numeric"
+ },
+ {
+  "id": "http://www.zotero.org/styles/elsevier-harvard",
+  "file": "elsevier-harvard.csl",
+  "title": "Elsevier (author-date/Harvard, with titles)",
+  "kind": "author-date"
+ },
+ {
+  "id": "http://www.zotero.org/styles/elsevier-vancouver",
+  "file": "elsevier-vancouver.csl",
+  "title": "Elsevier - NLM/Vancouver (citation-sequence)",
+  "kind": "numeric"
+ },
+ {
+  "id": "http://www.zotero.org/styles/elsevier-with-titles",
+  "file": "elsevier-with-titles.csl",
+  "title": "Elsevier (numeric, with titles)",
+  "kind": "numeric"
+ },
+ {
+  "id": "http://www.zotero.org/styles/cell",
+  "file": "cell.csl",
+  "title": "Cell",
+  "kind": "numeric"
+ },
+ {
+  "id": "http://www.zotero.org/styles/taylor-and-francis-national-library-of-medicine",
+  "file": "taylor-and-francis-national-library-of-medicine.csl",
+  "title": "Taylor & Francis - NLM/Vancouver (citation-sequence, brackets)",
+  "kind": "numeric"
+ },
+ {
+  "id": "http://www.zotero.org/styles/sage-vancouver",
+  "file": "sage-vancouver.csl",
+  "title": "SAGE - NLM/Vancouver",
+  "kind": "numeric"
+ },
+ {
+  "id": "http://www.zotero.org/styles/modern-language-association",
+  "file": "modern-language-association.csl",
+  "title": "MLA Handbook 9th edition (in-text citations)",
+  "kind": "author-date"
+ },
+ {
+  "id": "http://www.zotero.org/styles/jama",
+  "file": "jama.csl",
+  "title": "JAMA (The Journal of the American Medical Association)",
+  "kind": "numeric",
+  "parent": "http://www.zotero.org/styles/american-medical-association"
+ },
+ {
+  "id": "http://www.zotero.org/styles/annals-of-internal-medicine",
+  "file": "annals-of-internal-medicine.csl",
+  "title": "Annals of Internal Medicine",
+  "kind": "numeric",
+  "parent": "http://www.zotero.org/styles/nlm-citation-sequence"
+ },
+ {
+  "id": "http://www.zotero.org/styles/pediatrics",
+  "file": "pediatrics.csl",
+  "title": "Pediatrics",
+  "kind": "numeric",
+  "parent": "http://www.zotero.org/styles/american-medical-association"
+ },
+ {
+  "id": "http://www.zotero.org/styles/american-journal-of-epidemiology",
+  "file": "american-journal-of-epidemiology.csl",
+  "title": "American Journal of Epidemiology",
+  "kind": "numeric",
+  "parent": "http://www.zotero.org/styles/american-medical-association"
+ },
+ {
+  "id": "http://www.zotero.org/styles/the-journal-of-pediatrics",
+  "file": "the-journal-of-pediatrics.csl",
+  "title": "The Journal of Pediatrics",
+  "kind": "numeric",
+  "parent": "http://www.zotero.org/styles/elsevier-vancouver"
+ },
+ {
+  "id": "http://www.zotero.org/styles/archives-of-disease-in-childhood",
+  "file": "archives-of-disease-in-childhood.csl",
+  "title": "Archives of Disease in Childhood",
+  "kind": "numeric",
+  "parent": "http://www.zotero.org/styles/bmj"
+ }
+]
