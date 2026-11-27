@@ -1,11 +1,11 @@
 {
-	"name": "Hearth Assistant",
+	"name": "AI Tools",
 	"guid": "asc.{3F6A1C9E-52B7-4D0A-8E4B-7A1D9C0F2B61}",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"minVersion": "9.0.0",
 	"variations": [
 		{
-			"description": "Drafts, rewrites and summarises text, explains spreadsheet formulas and turns notes into slides, using the document as context. Every model request goes through the Document Server's own proxy.",
+			"description": "A chat beside the document and quick actions (summarise, rewrite, simplify, expand, proofread, translate, title, key points, contents), through Hearth. Every change is offered first and goes in only when accepted.",
 			"url": "index.html",
 			"icons": ["resources/icons/assistant.svg"],
 			"isViewer": false,
@@ -13,7 +13,7 @@
 			"type": "background",
 			"initDataType": "none",
 			"buttons": [],
-			"events": ["onAIPluginSettings", "onToolbarMenuClick"]
+			"events": ["onToolbarMenuClick"]
 		}
 	]
 }

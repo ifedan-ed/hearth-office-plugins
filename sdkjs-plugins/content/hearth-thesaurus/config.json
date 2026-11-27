@@ -1,0 +1,19 @@
+{
+	"name": "Thesaurus",
+	"guid": "asc.{6E0B4F2D-7C1A-4E93-B8D5-2F4A9C3E1B70}",
+	"version": "0.1.0",
+	"minVersion": "9.0.0",
+	"variations": [
+		{
+			"description": "Synonyms for a word, from the OpenOffice and LibreOffice thesauruses held on the server. Nothing is sent anywhere.",
+			"url": "index.html",
+			"icons": ["resources/icons/thesaurus.svg"],
+			"isViewer": false,
+			"EditorsSupport": ["word", "cell", "slide"],
+			"type": "background",
+			"initDataType": "none",
+			"buttons": [],
+			"events": ["onToolbarMenuClick", "onContextMenuShow", "onContextMenuClick"]
+		}
+	]
+}

@@ -1,0 +1,16 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Hearth contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ *
+ * On top of the shared panel base (../hearth-shared/panel.css).
+ */
+select { flex: 1 1 auto; }
+#findings { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.finding { padding: 8px; border: 1px solid var(--panel-border); border-radius: 4px; }
+.finding .kind { font-weight: 700; }
+.finding .kind.misspelling { color: #c0392b; }
+.finding .kind.grammar { color: #2a6fc9; }
+.finding .context { margin: 4px 0; color: var(--panel-muted); overflow-wrap: anywhere; }
+.finding .context mark { background: none; color: var(--panel-text); text-decoration: underline wavy #c0392b; text-underline-offset: 3px; }
+.finding .row { flex-wrap: wrap; }
+.finding .row button { padding: 2px 8px; }

@@ -1,0 +1,30 @@
+<!--
+ SPDX-FileCopyrightText: 2026 Hearth contributors
+ SPDX-License-Identifier: AGPL-3.0-only
+-->
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>Speech input</title>
+		<script src="../v1/plugins.js"></script>
+		<script src="../v1/plugins-ui.js"></script>
+		<link rel="stylesheet" href="../hearth-shared/panel.css">
+		<style>
+			#state { font-weight: 700; }
+			#state.on::before { content: '●'; color: #c0392b; margin-right: 6px; }
+			#interim { min-height: 3em; color: var(--panel-muted); font-style: italic; overflow-wrap: anywhere; }
+		</style>
+	</head>
+	<body>
+		<main>
+			<p id="state" aria-live="polite"></p>
+			<p id="interim"></p>
+			<p id="problem" role="alert" hidden></p>
+			<div class="row"><button id="stop" class="primary" type="button">Stop</button></div>
+		</main>
+		<script src="../hearth-shared/theme.js"></script>
+		<script src="scripts/panel.js"></script>
+	</body>
+</html>

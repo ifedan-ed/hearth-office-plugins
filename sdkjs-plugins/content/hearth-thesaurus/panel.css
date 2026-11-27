@@ -1,0 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Hearth contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ *
+ * On top of the shared panel base (../hearth-shared/panel.css).
+ */
+.meaning h2 { margin: 6px 0 4px; font-size: 12px; font-weight: 700; color: var(--panel-muted); text-transform: lowercase; }
+.meaning .words { display: flex; flex-wrap: wrap; gap: 4px; }
+.meaning .words button { padding: 2px 8px; border-radius: 10px; }

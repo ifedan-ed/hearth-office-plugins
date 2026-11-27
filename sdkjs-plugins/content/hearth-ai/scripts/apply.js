@@ -1,17 +1,22 @@
 // SPDX-FileCopyrightText: 2026 Hearth contributors
 // SPDX-License-Identifier: AGPL-3.0-only
 //
-// Puts an answer to use in the document: inserted at the cursor, in place of
-// the selection, as a comment on a cell, or as new slides. Text goes in with
-// the editor's own paste methods, so each use is one step in the undo
-// history and co-editors see it arrive like any other edit.
+// Puts an accepted answer into the document: inserted at the cursor, in
+// place of the selection, as a comment on a cell, or as new slides. Called
+// only when the person presses the answer's button in the panel: nothing
+// a model writes reaches the document before that. In a text document the
+// insert and the replacement are recorded as tracked changes by default,
+// so the author still accepts or rejects each one in Review, as a
+// colleague's edit. Text goes in with the editor's own paste methods, so
+// each use is one step in the undo history and co-editors see it arrive
+// like any other edit.
 (function (window) {
 	'use strict';
 
 	const HearthAI = window.HearthAI = window.HearthAI || {};
 
 	// The name comments are signed with.
-	const AUTHOR = 'Hearth Assistant';
+	const AUTHOR = 'AI Tools';
 
 	// method calls one of the editor's plugin methods and resolves with its
 	// answer.
@@ -47,7 +52,14 @@
 	// paragraph the cursor is in.
 	function insertBlocks() {
 		const doc = Api.GetDocument();
-		const made = [];
+		// The editor joins the first paragraph given to the text before the
+		// cursor (SelectedContent's common insert): when the cursor's
+		// paragraph has text, an empty one first keeps the answer on lines
+		// of its own.
+		const here = doc.GetCurrentParagraph();
+		let text = '';
+		try { text = here ? (here.GetText() || '') : ''; } catch (e) { text = ''; }
+		const made = text.trim() ? [Api.CreateParagraph()] : [];
 		let run = '', numbering = null; // the list the last block belonged to
 		Asc.scope.blocks.forEach(function (block) {
 			const paragraph = Api.CreateParagraph();
@@ -75,11 +87,14 @@
 
 	// insert adds the answer at the cursor, after the selection if there is
 	// one. In a text document the answer's headings, lists and bold text
-	// become real formatting; slides and cells take plain text.
-	async function insert(editor, markdown) {
+	// become real formatting, as a tracked change when track is set;
+	// slides and cells take plain text.
+	async function insert(editor, markdown, track) {
 		if (editor !== 'word') return method('PasteText', [HearthAI.markup.toPlain(markdown)]);
-		await change(cursorToSelectionEnd);
-		return change(insertBlocks, { blocks: HearthAI.markup.toBlocks(markdown) });
+		return tracked(track, async function () {
+			await change(cursorToSelectionEnd);
+			return change(insertBlocks, { blocks: HearthAI.markup.toBlocks(markdown) });
+		});
 	}
 
 	// Run in the editor: switch change tracking on and report how it was, and
@@ -92,16 +107,26 @@
 	}
 	function trackRestore() { Api.GetDocument().SetTrackRevisions(Asc.scope.was); }
 
+	// tracked runs fn with change tracking on (when track is set), and puts
+	// tracking back the way it was afterwards, even if fn fails.
+	async function tracked(track, fn) {
+		if (!track) return fn();
+		const was = await change(trackOn);
+		try {
+			return await fn();
+		} finally {
+			await change(trackRestore, { was: was });
+		}
+	}
+
 	// replace puts the answer in place of the selection. In a text document
 	// it can be recorded as a tracked change, so the author sees the old and
 	// the new wording side by side and accepts or rejects it as they would a
 	// colleague's edit; tracking is put back the way it was afterwards.
 	async function replace(editor, text, track) {
 		const plain = HearthAI.markup.toPlain(text);
-		if (editor !== 'word' || !track) return method('PasteText', [plain]);
-		const was = await change(trackOn);
-		await method('PasteText', [plain]);
-		return change(trackRestore, { was: was });
+		if (editor !== 'word') return method('PasteText', [plain]);
+		return tracked(track, function () { return method('PasteText', [plain]); });
 	}
 
 	// Runs in the editor: the explanation becomes a comment on the cell.

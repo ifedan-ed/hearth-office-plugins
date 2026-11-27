@@ -7,28 +7,51 @@
 	<head>
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1">
-		<title>Assistant</title>
+		<title>AI Tools</title>
 		<script src="../v1/plugins.js"></script>
 		<script src="../v1/plugins-ui.js"></script>
 		<link rel="stylesheet" href="panel.css">
 	</head>
 	<body>
-		<!-- The side panel: the instruction, the answer as it is written, and
-		     what to do with it. It shows and reports; the background page
-		     (scripts/main.js) reads and changes the document. -->
+		<!-- The side panel: the chat beside the document, or one quick
+		     action. It shows and reports; the background page
+		     (scripts/main.js) reads and changes the document, and only when
+		     an answer's button is pressed here. -->
 		<main>
-			<h1 id="task-name"></h1>
-			<div id="choices" hidden></div>
-			<textarea id="instruction" rows="3"></textarea>
-			<div class="row">
-				<button id="go" class="primary" type="button">Go</button>
-				<button id="stop" type="button" hidden>Stop</button>
-			</div>
+			<header>
+				<div class="views" role="tablist">
+					<button id="view-chat" type="button" role="tab">Chat</button>
+					<button id="view-task" type="button" role="tab" hidden></button>
+				</div>
+				<select id="model" aria-label="Model"></select>
+			</header>
 			<p id="problem" role="alert" hidden></p>
-			<section id="answer" aria-live="polite" hidden></section>
-			<div id="uses" class="row" hidden>
-				<label id="track-row" hidden><input id="track" type="checkbox" checked> Track change</label>
-			</div>
+
+			<section id="chat" hidden>
+				<div id="thread" aria-live="polite"></div>
+				<div class="composer">
+					<textarea id="question" rows="3" placeholder="Ask about this document"></textarea>
+					<div class="row">
+						<button id="new-chat" type="button">New chat</button>
+						<span class="grow"></span>
+						<button id="send" class="primary" type="button">Send</button>
+						<button id="chat-stop" type="button" hidden>Stop</button>
+					</div>
+				</div>
+			</section>
+
+			<section id="task" hidden>
+				<div id="choices" hidden></div>
+				<textarea id="instruction" rows="3"></textarea>
+				<div class="row">
+					<button id="go" class="primary" type="button">Go</button>
+					<button id="stop" type="button" hidden>Stop</button>
+				</div>
+				<section id="answer" class="answer" aria-live="polite" hidden></section>
+				<div id="uses" class="row" hidden>
+					<label id="track-row" hidden><input id="track" type="checkbox" checked> Track change</label>
+				</div>
+			</section>
 		</main>
 		<script src="scripts/markup.js"></script>
 		<script src="scripts/panel.js"></script>

@@ -6,18 +6,14 @@
 <html lang="en">
 	<head>
 		<meta charset="UTF-8">
-		<title>Hearth Assistant</title>
-		<!-- The background page: no window of its own. The plugin SDK comes
-		     from the Document Server itself (sdkjs-plugins/v1); nothing is
-		     loaded from an outside site. Order matters: each script adds to
-		     window.HearthAI and main.js wires them together last. -->
+		<title>AI Tools</title>
+		<!-- The background page: no window of its own. Only the plugin SDK
+		     (served by the Document Server itself, sdkjs-plugins/v1) and
+		     main.js load with the document: main.js adds the tab, and loads
+		     the rest (scripts/main.js, LAZY) on the first click, so opening
+		     a document costs the add-in almost nothing. -->
 		<script src="../v1/plugins.js"></script>
 		<script src="../v1/plugins-ui.js"></script>
-		<script src="scripts/model.js"></script>
-		<script src="scripts/context.js"></script>
-		<script src="scripts/tasks.js"></script>
-		<script src="scripts/markup.js"></script>
-		<script src="scripts/apply.js"></script>
 		<script src="scripts/main.js"></script>
 	</head>
 	<body></body>

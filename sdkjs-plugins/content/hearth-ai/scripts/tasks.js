@@ -1,10 +1,12 @@
 // SPDX-FileCopyrightText: 2026 Hearth contributors
 // SPDX-License-Identifier: AGPL-3.0-only
 //
-// What the assistant can do. Each task is data: where it is offered, what it
-// needs from the person, how its request is worded and how its answer is put
-// to use. Adding a task is adding an entry here; the toolbar, the panel and
-// the model call are driven by this list.
+// The quick actions of AI Tools. Each task is data: where it is offered,
+// what it needs from the person, how its request is worded and how its
+// answer may be used once the person accepts it. Adding a task is adding
+// an entry here and a button in main.js's TOOLBAR; the panel and the model
+// call are driven by this list. The chat beside the document is not a task:
+// it is a Copilot chat (main.js ask), given documentText.
 (function (window) {
 	'use strict';
 
@@ -143,6 +145,87 @@
 			},
 		},
 		{
+			id: 'simplify', editors: ['word', 'slide'], label: 'Simplify', hint: 'Plainer words, shorter sentences',
+			ask: 'For whom (optional)', required: false, needs: 'selection', result: 'text', uses: ['replace', 'copy'],
+			build: function (ctx, instruction) {
+				return {
+					system: RULES + '\n' + FORMAT.plain + '\n' + FAITHFUL +
+						'\nRewrite the selection in plain language: common words, short sentences, active voice, one idea per sentence. Keep every fact, number, name and citation mark. Return the rewritten selection and nothing else.',
+					user: [describe(ctx, false), tag('selection', ctx.selection), tag('instruction', instruction || 'For a general reader.')].filter(Boolean).join('\n\n'),
+				};
+			},
+		},
+		{
+			id: 'expand', editors: ['word', 'slide'], label: 'Expand', hint: 'Develop the selected text',
+			ask: 'What to add (optional)', required: false, needs: 'selection', result: 'text', uses: ['replace', 'insert', 'copy'],
+			build: function (ctx, instruction) {
+				return {
+					system: RULES + '\n' + (ctx.editor === 'word' ? FORMAT.rich : FORMAT.plain) +
+						'\nExpand the selection to about twice its length: explain its points, add the steps or links of reasoning it leaves out, in the same voice and terms. Do not add figures, names, findings or references that are not in the material. Return the expanded text and nothing else.',
+					user: [describe(ctx, false), tag('selection', ctx.selection), tag('instruction', instruction)].filter(Boolean).join('\n\n'),
+				};
+			},
+		},
+		{
+			id: 'proofread', editors: ['word', 'slide'], label: 'Proofread', hint: 'Spelling, grammar and punctuation only',
+			ask: '', required: false, needs: 'selection', result: 'text', uses: ['replace', 'copy'],
+			build: function (ctx) {
+				return {
+					system: RULES + '\n' + FORMAT.plain +
+						'\nCorrect spelling, grammar, punctuation and plain typing errors in the selection. Change nothing else: not the wording, the style, the order or the line breaks. If nothing needs correcting, return the selection unchanged. Return the corrected selection and nothing else.',
+					user: tag('selection', ctx.selection),
+				};
+			},
+		},
+		{
+			id: 'translate', editors: ['word', 'slide'], label: 'Translate', hint: 'Translate the selection, or the whole text',
+			ask: 'Into which language', required: true, result: 'text', uses: ['replace', 'insert', 'copy'],
+			choices: ['English', 'French', 'Spanish', 'Portuguese', 'German', 'Arabic', 'Yoruba', 'Hausa', 'Igbo', 'Chinese'],
+			build: function (ctx, instruction) {
+				const material = ctx.selection ? tag('selection', ctx.selection) : describe(ctx, true);
+				return {
+					system: RULES + '\n' + (ctx.editor === 'word' ? FORMAT.rich : FORMAT.plain) +
+						'\nTranslate the material into the language the instruction names, faithfully and naturally, keeping its paragraphs, headings, lists, numbers, names and citation marks. Translate only: no notes, no comments on the text.',
+					user: [material, tag('instruction', 'Translate into ' + instruction + '.')].join('\n\n'),
+				};
+			},
+		},
+		{
+			id: 'keypoints', editors: ['word', 'cell', 'slide'], label: 'Key points', hint: 'The main points as a list',
+			ask: 'How many, or a focus (optional)', required: false, result: 'text', uses: ['insert', 'copy'],
+			build: function (ctx, instruction) {
+				const material = ctx.selection ? tag('selection', ctx.selection) : describe(ctx, true);
+				return {
+					system: RULES + '\n' + FORMAT.rich + '\n' + FAITHFUL +
+						'\nList the key points of the material as "- " bullets, one sentence each, most important first, each standing on its own. Keep the figures that carry them.',
+					user: [material, tag('instruction', instruction || 'Three to seven points.')].join('\n\n'),
+				};
+			},
+		},
+		{
+			id: 'title', editors: ['word', 'slide'], label: 'Suggest title', hint: 'Titles that fit this document',
+			ask: 'Kind of title (optional)', required: false, result: 'text', uses: ['copy', 'insert'],
+			choices: ['Scientific paper', 'Report', 'Short and catchy'],
+			build: function (ctx, instruction) {
+				return {
+					system: RULES + '\n' + FORMAT.rich + '\n' + FAITHFUL +
+						'\nSuggest five titles for the document as "- " bullets, each at most fifteen words, each saying what the document is about. No quotation marks.',
+					user: [describe(ctx, true), tag('instruction', instruction)].filter(Boolean).join('\n\n'),
+				};
+			},
+		},
+		{
+			id: 'toc', editors: ['word'], label: 'Contents', hint: 'A table of contents from the text',
+			ask: 'Depth or notes (optional)', required: false, result: 'text', uses: ['insert', 'copy'],
+			build: function (ctx, instruction) {
+				return {
+					system: RULES + '\n' + FORMAT.rich + '\n' + FAITHFUL +
+						'\nWrite a table of contents for the document: "1. " numbered sections in the order they come, with "- " sub-items under a section only where the text has clear parts. Use the document\'s own headings where it has them; otherwise name each part in a few words. No page numbers. Start with the heading "# Contents".',
+					user: [describe(ctx, true), tag('instruction', instruction)].filter(Boolean).join('\n\n'),
+				};
+			},
+		},
+		{
 			id: 'explain', editors: ['cell'], label: 'Explain formula', hint: 'Explain the formula in the active cell',
 			ask: 'A question about it (optional)', required: false, result: 'text', uses: ['comment', 'copy'],
 			build: function (ctx, instruction) {
@@ -169,19 +252,19 @@
 				};
 			},
 		},
-		{
-			id: 'ask', editors: ['word', 'cell', 'slide'], label: 'Ask', hint: 'Ask a question about this document',
-			ask: 'Your question', required: true, result: 'text', uses: ['copy', 'insert'],
-			build: function (ctx, instruction) {
-				const material = [describe(ctx, true)];
-				if (ctx.editor === 'cell') material.push(describeCell(ctx.detail.active));
-				return {
-					system: RULES + '\n' + FORMAT.panel + '\n' + FAITHFUL + '\nAnswer the question from the document. Say so plainly when the document does not hold the answer.',
-					user: material.concat([tag('selection', ctx.selection), tag('instruction', instruction)]).filter(Boolean).join('\n\n'),
-				};
-			},
-		},
 	];
+
+	// documentText is the document's text for the chat beside it, as plain
+	// as it can be: a text document's text, a deck's slides, a sheet's
+	// rows. Hearth puts it in the chat's instructions as material.
+	function documentText(ctx) {
+		const d = ctx.detail;
+		if (ctx.editor === 'word') return d.text + (d.truncated ? '\n[The document goes on; only its first part is given.]' : '');
+		if (ctx.editor === 'slide') {
+			return d.slides.map(function (s, i) { return 'Slide ' + (i + 1) + ': ' + (s.title || '(no title)') + (s.text ? '\n' + s.text : ''); }).join('\n\n');
+		}
+		return 'Sheet ' + d.sheet.sheet + ' (' + d.sheet.totalRows + ' rows in use; the first ' + d.sheet.rows.length + ', tab separated):\n' + d.sheet.rows.join('\n');
+	}
 
 	// forEditor returns the tasks offered in one editor.
 	function forEditor(editor) {
@@ -212,5 +295,5 @@
 		return slides.length ? slides : null;
 	}
 
-	HearthAI.tasks = { forEditor: forEditor, byId: byId, parseSlides: parseSlides };
+	HearthAI.tasks = { forEditor: forEditor, byId: byId, parseSlides: parseSlides, documentText: documentText };
 })(window);

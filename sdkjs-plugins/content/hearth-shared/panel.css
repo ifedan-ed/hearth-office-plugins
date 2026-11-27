@@ -1,0 +1,33 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Hearth contributors
+ * SPDX-License-Identifier: AGPL-3.0-only
+ *
+ * The base of the small add-ins' side panels (Thesaurus, Spelling and
+ * grammar, Speech input). Colours come from the editor's theme (each
+ * panel's script copies them into custom properties); the values after
+ * the commas are its stock light theme, until the theme arrives.
+ */
+:root {
+	--panel-bg: var(--background-normal, #ffffff);
+	--panel-text: var(--text-normal, #333333);
+	--panel-muted: var(--text-secondary, #6b6b6b);
+	--panel-border: var(--border-regular-control, #c0c0c0);
+	--panel-hover: var(--highlight-button-hover, #e0e0e0);
+	--panel-accent: var(--background-primary-dialog-button, #444444);
+	--panel-accent-text: var(--text-inverse, #ffffff);
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--panel-bg); color: var(--panel-text); font: 12px/1.45 Arial, Helvetica, sans-serif; }
+main { display: flex; flex-direction: column; gap: 8px; height: 100%; padding: 12px; overflow-y: auto; }
+.row { display: flex; gap: 6px; align-items: center; }
+input, select { min-width: 0; padding: 4px 6px; font: inherit; color: inherit; background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 3px; }
+input { flex: 1 1 auto; }
+button { white-space: nowrap; padding: 4px 10px; font: inherit; color: inherit; cursor: pointer; background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 3px; }
+button:hover { background: var(--panel-hover); }
+button.primary { background: var(--panel-accent); border-color: var(--panel-accent); color: var(--panel-accent-text); }
+input:focus-visible, button:focus-visible, select:focus-visible { outline: 2px solid var(--panel-accent); outline-offset: 1px; }
+[hidden] { display: none !important; }
+p { margin: 0; }
+.muted { color: var(--panel-muted); }
+#problem { color: #c0392b; }

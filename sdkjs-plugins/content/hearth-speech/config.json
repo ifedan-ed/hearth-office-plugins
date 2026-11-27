@@ -1,0 +1,19 @@
+{
+	"name": "Speech input",
+	"guid": "asc.{C7D3A1B9-5E2F-4C8A-B6D4-9F1E3A7C5B28}",
+	"version": "0.1.0",
+	"minVersion": "9.0.0",
+	"variations": [
+		{
+			"description": "Type by speaking: Hearth's Dictate records and recognises on Hearth's own page, and the words go in at the cursor.",
+			"url": "index.html",
+			"icons": ["resources/icons/speech.svg"],
+			"isViewer": false,
+			"EditorsSupport": ["word", "cell", "slide"],
+			"type": "background",
+			"initDataType": "none",
+			"buttons": [],
+			"events": ["onToolbarMenuClick"]
+		}
+	]
+}

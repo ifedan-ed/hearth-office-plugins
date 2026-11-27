@@ -1,54 +1,58 @@
-# Hearth Assistant
+# AI Tools
 
-The AI add-in of Hearth Office. It adds an Assistant tab to the document,
-spreadsheet and presentation editors and a side panel that shows each answer
-as it is written.
+The AI add-in of Hearth Office. It adds an AI Tools tab to the document,
+spreadsheet and presentation editors and a side panel: a chat beside the
+document, and quick actions.
 
-- Draft: writes new text from an instruction, fitted to the text around the
+- Chat: questions about the open document, answered by Hearth's Copilot
+  with the document's text as it is now, and with the Copilot's search of
+  the person's files and notes, PubMed and their References. Chats are
+  kept with the person's other Copilot chats. An action the chat proposes
+  (saving papers to References, say) is shown with Confirm and Decline.
+- Summarise, Key points: the selection, or the whole document, sheet or
+  deck.
+- Rewrite, Simplify, Expand, Proofread: the selected text.
+- Translate: the selection or the whole text, into the language named.
+- Suggest title, Contents: from the document's text.
+- Draft: new text from an instruction, fitted to the text around the
   cursor (documents, presentations).
-- Rewrite: rewrites the selected text; in a document the result goes in as a
-  tracked change that can be accepted or rejected.
-- Summarise: the selection, or the whole document, sheet or deck.
-- Explain formula: says what the formula in the active cell works out and
-  how, using the cells it refers to and their headings; the explanation can
-  be kept as a comment on the cell (spreadsheets).
-- Notes to slides: turns pasted notes into slides on the deck's own layout,
-  with speaker notes (presentations).
-- Ask: a question about the open document.
+- Explain formula: what the active cell's formula works out and how, from
+  the cells it uses and their headings (spreadsheets).
+- Notes to slides: notes turned into slides on the deck's own layout, with
+  speaker notes (presentations).
+- A model picker in the panel: the chat models the model proxy offers,
+  starting on the person's own model.
+
+Nothing a model writes reaches the document by itself: every answer is
+shown in the panel first, and goes in only when its Insert, Replace, Add
+as comment or Add slides button is pressed. In a text document an insert
+or a replacement is recorded as a tracked change (unless Track change is
+unticked), so it can still be accepted or rejected in Review.
 
 ## How it reaches a model
 
-Every request goes to the Document Server's own proxy (`/ai-proxy`), which
-checks the editing session, adds the key on the server and forwards the
-request to the provider named in the server's settings (`aiSettings`). The
-browser holds no key and calls no provider. The model is the one set as
-`aiSettings.actions.Chat.model`; there is no settings screen in the add-in
-and no second choice. Without that setting the add-in says it is not set up.
+The add-in asks Hearth's page, the window the editor is framed in, by
+message (../hearth-shared/bridge.js, channel "assistant"). Hearth's page
+calls Hearth's API with the person's own session; Hearth checks that its
+admins have the editor's assistant on, takes the model the person picked
+(one the model proxy offers) and calls the model proxy (LiteLLM), adding
+its key on the server. The browser holds no key and calls nothing but
+Hearth and the Document Server. The document is passed to the model as
+marked material, not as instructions.
 
-The provider must speak the OpenAI chat-completions protocol with streaming
-(LiteLLM does).
-
-## Installing
-
-Put this folder and the plugin SDK (`sdkjs-plugins/v1`) into the server's
-`sdkjs-plugins` folder and start it with the document:
-
-    "services": {"CoAuthoring": {"plugins": {
-      "autostart": ["asc.{3F6A1C9E-52B7-4D0A-8E4B-7A1D9C0F2B61}"]}}}
-
-The Hearth Office image has it built in.
+Only the tab's button list loads with the document; the rest of the
+add-in loads on the first click.
 
 ## Files
 
 | File | What it holds |
 | --- | --- |
-| scripts/main.js | The toolbar tab, the panel, and the path of one request |
-| scripts/tasks.js | The tasks as data: where each is offered and how its request is worded |
+| scripts/main.js | The toolbar tab, loading the rest on first use, the panel, and the path of one request |
+| scripts/hearth.js | The way to Hearth: the model list, a quick action, a chat question, a decision |
+| scripts/tasks.js | The quick actions as data: where each is offered and how its request is worded |
 | scripts/context.js | Reading the document: selection, outline, text at the cursor, cells, slides |
-| scripts/model.js | The one model call, through the server's proxy, streamed |
-| scripts/apply.js | Putting an answer into the document |
+| scripts/apply.js | Putting an accepted answer into the document |
 | scripts/markup.js | The small Markdown subset answers use, as HTML or plain text |
 | panel.html, scripts/panel.js, panel.css | The side panel |
-| translations/langs.json | An empty list of translations: the add-in is in English only. The plugin SDK asks every page for this list when the editor's language is not en-EN; with the list there it stops after one answer instead of two 404s (langs.json, then the language's own file) |
 
-No build step: plain scripts, no dependencies.
+Tests: `node --test .tests/tasks.test.mjs`.

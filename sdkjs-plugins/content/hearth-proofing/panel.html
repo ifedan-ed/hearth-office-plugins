@@ -1,0 +1,30 @@
+<!--
+ SPDX-FileCopyrightText: 2026 Hearth contributors
+ SPDX-License-Identifier: AGPL-3.0-only
+-->
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>Spelling and grammar</title>
+		<script src="../v1/plugins.js"></script>
+		<script src="../v1/plugins-ui.js"></script>
+		<link rel="stylesheet" href="../hearth-shared/panel.css">
+		<link rel="stylesheet" href="panel.css">
+	</head>
+	<body>
+		<main>
+			<div class="row">
+				<select id="language" aria-label="Language"><option value="auto">Detect language</option></select>
+				<button id="check" class="primary" type="button">Check</button>
+			</div>
+			<p id="problem" role="alert" hidden></p>
+			<p id="state" class="muted" aria-live="polite" hidden></p>
+			<button id="apply" type="button" hidden>Replace selection</button>
+			<ol id="findings"></ol>
+		</main>
+		<script src="../hearth-shared/theme.js"></script>
+		<script src="scripts/panel.js"></script>
+	</body>
+</html>

@@ -1,0 +1,19 @@
+{
+	"name": "Spelling and grammar",
+	"guid": "asc.{A4C2E8F1-3B5D-4F7A-9E6C-1D8B2A5F3C90}",
+	"version": "0.1.0",
+	"minVersion": "9.0.0",
+	"variations": [
+		{
+			"description": "Spelling, grammar and style checked by the LanguageTool server Hearth runs itself. The text goes to Hearth only, and nothing is kept.",
+			"url": "index.html",
+			"icons": ["resources/icons/proofing.svg"],
+			"isViewer": false,
+			"EditorsSupport": ["word", "cell", "slide"],
+			"type": "background",
+			"initDataType": "none",
+			"buttons": [],
+			"events": ["onToolbarMenuClick"]
+		}
+	]
+}
