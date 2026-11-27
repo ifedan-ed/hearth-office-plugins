@@ -27,10 +27,29 @@
 		return new Promise(function (resolve) { window.Asc.plugin.executeMethod(name, args || [], resolve); });
 	}
 
+	// Runs in the editor: the text of the paragraph the cursor is in.
+	function paragraphText() {
+		const p = Api.GetDocument().GetCurrentParagraph();
+		try { return p ? (p.GetText({ Numbering: false, Math: false }) || '') : ''; } catch (e) { return ''; }
+	}
+
+	// textBefore is the text the words follow. The sentence before the
+	// cursor, or, right after a full stop (where the editor's current
+	// sentence is the new, empty one), the paragraph's text, so the words
+	// get their space and their capital (live, 2026-11-27: "clear.Dear").
+	async function textBefore() {
+		if (editor !== 'word') return '';
+		const sentence = (await method('GetCurrentSentence', ['before'])) || '';
+		if (sentence) return sentence;
+		return new Promise(function (resolve) {
+			window.Asc.plugin.callCommand(paragraphText, false, false, function (t) { resolve(t || ''); });
+		});
+	}
+
 	// type puts one piece's words in at the cursor, after the words before.
 	function type(text) {
 		typing = typing.then(async function () {
-			const before = editor === 'word' ? ((await method('GetCurrentSentence', ['before'])) || '') : '';
+			const before = await textBefore();
 			const joined = await bridge.ask('join', { before: before, text: text });
 			if (joined) await method('PasteText', [joined]);
 		}).catch(function (e) { say('onProblem', e.message); });
